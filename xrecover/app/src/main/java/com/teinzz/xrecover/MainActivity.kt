@@ -97,6 +97,8 @@ private fun XRecover(prefs: android.content.SharedPreferences, dark: Boolean) {
     var draft by remember { mutableStateOf("") }
     var issue by remember { mutableStateOf(IssueTypes[0]) }
     var phone by remember { mutableStateOf("") }
+    var appType by remember { mutableStateOf("Belum dipilih") }
+    var automationUse by remember { mutableStateOf("Belum dipilih") }
     var screenMessage by remember { mutableStateOf("") }
     var startWhen by remember { mutableStateOf("") }
     var triedSteps by remember { mutableStateOf("") }
@@ -124,12 +126,17 @@ private fun XRecover(prefs: android.content.SharedPreferences, dark: Boolean) {
             ?: "Nomor WhatsApp: [masukkan nomor dengan kode negara, jika diperlukan]"
         fun valueOrPrompt(value: String, prompt: String): String =
             value.trim().takeIf { it.isNotEmpty() } ?: "[$prompt]"
-        val chronology = listOf(
+        val chronologyItems = mutableListOf(
             "Pesan persis di layar: " + valueOrPrompt(screenMessage, "belum diisi; salin teks yang tampil jika ada"),
             "Mulai terjadi: " + valueOrPrompt(startWhen, "tanggal/jam belum diketahui"),
             "Langkah yang sudah dicoba: " + valueOrPrompt(triedSteps, "belum dijelaskan"),
             "Keterangan tambahan: " + valueOrPrompt(detail, "tidak ada keterangan tambahan")
-        ).joinToString("\n")
+        )
+        if (issue == "Banned sementara" || issue == "Banned permanen" || issue == "Akun dibatasi (Restricted)") {
+            chronologyItems.add("Aplikasi yang digunakan: " + if (appType == "Belum dipilih") "[belum dikonfirmasi]" else appType)
+            chronologyItems.add("Alat otomatis / scraping: " + if (automationUse == "Belum dipilih") "[belum dikonfirmasi]" else automationUse)
+        }
+        val chronology = chronologyItems.joinToString("\n")
         val description = when (issue) {
             "Banned sementara" -> "WhatsApp menampilkan pemberitahuan pembatasan sementara pada akun saya. Saya ingin memahami alasan dan langkah yang diperbolehkan untuk menyelesaikan masalah ini. Saya akan mengikuti waktu tunggu atau instruksi yang ditampilkan di aplikasi resmi dan tidak akan mencoba menghindari pembatasan."
             "Banned permanen" -> "WhatsApp menampilkan pemberitahuan bahwa nomor saya tidak dapat menggunakan layanan. Saya meminta peninjauan atas keputusan tersebut apabila tombol Request review tersedia di aplikasi. Mohon periksa kasus ini berdasarkan informasi yang saya berikan; saya memahami bahwa keputusan akhir berada pada WhatsApp."
@@ -171,13 +178,16 @@ private fun XRecover(prefs: android.content.SharedPreferences, dark: Boolean) {
             when (page) {
                 "Pulihkan" -> RecoverScreen(
                     dark, issue, { issue = it }, phone, { phone = it.take(25) },
+                    appType, { appType = it },
+                    automationUse, { automationUse = it },
                     screenMessage, { screenMessage = it.take(220) },
                     startWhen, { startWhen = it.take(100) },
                     triedSteps, { triedSteps = it.take(220) },
                     detail, { detail = it.take(300) },
                     { buildDraft() }, { openWhatsApp() },
                     { openUrl("https://faq.whatsapp.com/465883178708358/") },
-                    { openUrl("https://faq.whatsapp.com/684051319521343/") }
+                    { openUrl("https://faq.whatsapp.com/684051319521343/") },
+                    { openUrl("https://www.whatsapp.com/contact/?lang=id&subject=messenger") }
                 )
                 "Status" -> StatusScreen(records, { id, state -> updateRecord(id, state) }, { openWhatsApp() }, { openUrl("https://faq.whatsapp.com/465883178708358/") })
                 "FAQ" -> FaqScreen(
@@ -260,7 +270,7 @@ private fun XRecover(prefs: android.content.SharedPreferences, dark: Boolean) {
 }
 
 @Composable
-private fun RecoverScreen(dark: Boolean, issue: String, setIssue: (String) -> Unit, phone: String, setPhone: (String) -> Unit, screenMessage: String, setScreenMessage: (String) -> Unit, startWhen: String, setStartWhen: (String) -> Unit, triedSteps: String, setTriedSteps: (String) -> Unit, detail: String, setDetail: (String) -> Unit, generate: () -> Unit, openApp: () -> Unit, openBan: () -> Unit, openOtp: () -> Unit) {
+private fun RecoverScreen(dark: Boolean, issue: String, setIssue: (String) -> Unit, phone: String, setPhone: (String) -> Unit, appType: String, setAppType: (String) -> Unit, automationUse: String, setAutomationUse: (String) -> Unit, screenMessage: String, setScreenMessage: (String) -> Unit, startWhen: String, setStartWhen: (String) -> Unit, triedSteps: String, setTriedSteps: (String) -> Unit, detail: String, setDetail: (String) -> Unit, generate: () -> Unit, openApp: () -> Unit, openBan: () -> Unit, openOtp: () -> Unit, openContact: () -> Unit) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("AKUN WHATSAPP\nBERMASALAH?", fontWeight = FontWeight.ExtraBold, fontSize = 27.sp, lineHeight = 29.sp, letterSpacing = (-.5).sp)
         Text("Pilih masalah dan ikuti langkah resmi.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -274,6 +284,22 @@ private fun RecoverScreen(dark: Boolean, issue: String, setIssue: (String) -> Un
                 IssueMenu(issue, setIssue)
                 OutlinedTextField(value = phone, onValueChange = setPhone, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Nomor WhatsApp (opsional)") }, placeholder = { Text("+62…") }, shape = RoundedCornerShape(13.dp))
                 Text("Nomor tidak disimpan dalam riwayat.", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (issue == "Banned sementara" || issue == "Banned permanen" || issue == "Akun dibatasi (Restricted)") {
+                    Text("INFORMASI TAMBAHAN UNTUK PEMERIKSAAN", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    InfoChoice(
+                        selected = appType,
+                        choose = setAppType,
+                        label = "Aplikasi yang digunakan",
+                        options = listOf("Belum dipilih", "WhatsApp resmi", "Aplikasi modifikasi / tidak resmi", "Tidak yakin")
+                    )
+                    InfoChoice(
+                        selected = automationUse,
+                        choose = setAutomationUse,
+                        label = "Penggunaan alat otomatis / scraping",
+                        options = listOf("Belum dipilih", "Tidak menggunakan alat otomatis", "Menggunakan alat otomatis / scraping", "Tidak yakin")
+                    )
+                    Text("Jawab sesuai keadaan sebenarnya. Pilihan ini hanya masuk ke draf lokal dan tidak dikirim otomatis.", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
                 OutlinedTextField(
                     value = screenMessage, onValueChange = setScreenMessage,
                     modifier = Modifier.fillMaxWidth(), minLines = 2, maxLines = 3,
@@ -313,7 +339,14 @@ private fun RecoverScreen(dark: Boolean, issue: String, setIssue: (String) -> Un
                 OutlinedButton(onClick = openApp, modifier = Modifier.fillMaxWidth().height(45.dp), shape = RoundedCornerShape(13.dp)) { Icon(Icons.Outlined.OpenInNew, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Buka WhatsApp") }
             }
         }
-        Text("AKSES CEPAT", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        NextStepsCard(
+            issue = issue,
+            openWhatsApp = openApp,
+            openBanGuide = openBan,
+            openOtpGuide = openOtp,
+            openContact = openContact
+        )
+                Text("AKSES CEPAT", fontWeight = FontWeight.Bold, fontSize = 14.sp)
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             QuickCard("Banding ban", "Panduan resmi", Icons.Outlined.Shield, Modifier.weight(1f), openBan)
             QuickCard("Kode OTP", "Kode tidak masuk", Icons.Outlined.SmsFailed, Modifier.weight(1f), openOtp)
@@ -321,6 +354,103 @@ private fun RecoverScreen(dark: Boolean, issue: String, setIssue: (String) -> Un
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Top) {
             Icon(Icons.Outlined.Info, null, modifier = Modifier.size(17.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
             Text("XRecover tidak bisa membatalkan ban atau mempercepat peninjauan. Hasil resmi hanya dapat dikonfirmasi WhatsApp.", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+
+@Composable
+private fun InfoChoice(selected: String, choose: (String) -> Unit, label: String, options: List<String>) {
+    var expanded by remember { mutableStateOf(false) }
+    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+        Text(label, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Box {
+            Surface(
+                modifier = Modifier.fillMaxWidth().clickable { expanded = true },
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+            ) {
+                Row(Modifier.padding(horizontal = 12.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(selected, modifier = Modifier.weight(1f), fontSize = 13.sp)
+                    Text("⌄", fontSize = 18.sp)
+                }
+            }
+            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                options.forEach { option ->
+                    DropdownMenuItem(text = { Text(option, fontSize = 13.sp) }, onClick = { choose(option); expanded = false })
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun NextStepsCard(
+    issue: String,
+    openWhatsApp: () -> Unit,
+    openBanGuide: () -> Unit,
+    openOtpGuide: () -> Unit,
+    openContact: () -> Unit
+) {
+    val (title, body, action, click) = when (issue) {
+        "Banned sementara" -> listOf(
+            "Langkah aman berikutnya",
+            "Gunakan aplikasi WhatsApp resmi. Jika memakai aplikasi tidak resmi, beralihlah ke aplikasi resmi; jika ada aktivitas scraping/otomatis, hentikan. Ikuti timer yang tampil dan jangan mencoba mengakali pembatasan.",
+            "Buka WhatsApp",
+            openWhatsApp
+        )
+        "Banned permanen" -> listOf(
+            "Ajukan peninjauan resmi",
+            "Jika tombol Request review tersedia di aplikasi, gunakan jalur itu untuk nomor tersebut. Teks bantuan tidak menjamin ban dicabut dan menghubungi pihak lain tidak mempercepat keputusan.",
+            "Buka WhatsApp",
+            openWhatsApp
+        )
+        "Akun dibatasi (Restricted)" -> listOf(
+            "Periksa pembatasan akun",
+            "Baca pesan pembatasan di aplikasi resmi dan gunakan pilihan bantuan yang ditampilkan. Jangan gunakan alat untuk menghindari pembatasan.",
+            "Buka panduan resmi",
+            openBanGuide
+        )
+        "OTP / kode tidak masuk" -> listOf(
+            "Periksa sebelum meminta kode lagi",
+            "Pastikan nomor dan kode negara benar, SIM bisa menerima SMS/panggilan, lalu tunggu timer di layar. Jangan bagikan kode registrasi atau PIN kepada siapa pun.",
+            "Buka panduan kode",
+            openOtpGuide
+        )
+        "Coba lagi nanti" -> listOf(
+            "Ikuti waktu tunggu",
+            "Jangan meminta kode berulang kali. Tunggu durasi yang ditampilkan aplikasi, lalu coba kembali melalui aplikasi resmi.",
+            "Buka panduan kode",
+            openOtpGuide
+        )
+        "Akun diretas / diambil alih" -> listOf(
+            "Amankan pendaftaran akun",
+            "Gunakan aplikasi resmi dan prosedur registrasi nomor. Jangan pernah membagikan kode SMS atau PIN verifikasi kepada orang yang mengaku sebagai dukungan.",
+            "Buka WhatsApp",
+            openWhatsApp
+        )
+        else -> listOf(
+            "Gunakan saluran bantuan resmi",
+            "Tulis pesan kesalahan yang tepat dan langkah yang sudah dilakukan. Jangan sertakan kata sandi, OTP, PIN, atau kode pemulihan.",
+            "Buka kontak resmi",
+            openContact
+        )
+    }
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .7f))
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(15.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            Text(body, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, lineHeight = 17.sp)
+            OutlinedButton(onClick = click, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
+                Text(action, fontSize = 12.sp)
+            }
         }
     }
 }
