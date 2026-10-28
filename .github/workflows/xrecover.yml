@@ -43,7 +43,7 @@ jobs:
       - name: Install Android platform and build tools
         run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
 
-      - name: Build debug APK
+      - name: Build optimized release APK
         run: gradle --no-daemon --stacktrace assembleRelease
 
       - name: Prepare APK filename
@@ -63,11 +63,11 @@ jobs:
       - name: Publish installable APK release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: xrecover-v1.0.0
+          tag_name: xrecover-v1.0.1
           target_commitish: xrecover-v1
-          name: XRecover v1.0.0 (Android 10+)
+          name: XRecover v1.0.1 (Android 10+)
           body: |
-            Optimized installable APK for XRecover.
+            Optimized installable APK for XRecover v1.0.1.
             Minimum Android: 10 (API 29).
             This app is an independent guide and is not affiliated with WhatsApp.
           files: xrecover/app/build/outputs/apk/release/XRecover.apk

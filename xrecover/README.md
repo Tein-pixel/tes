@@ -8,4 +8,4 @@ Privacy by design: no internet permission, account login, OTP, password, or API 
 
 XRecover is not a WhatsApp product and cannot unban an account or inspect the real status of an appeal. Official decisions remain in WhatsApp.
 
-Build with JDK 17, Gradle 8.9, Android SDK 35: gradle assembleDebug.
+Build with JDK 17, Gradle 8.9, Android SDK platform 35, and Build Tools 35.0.0: gradle assembleRelease. The release build enables R8/resource shrinking and uses a debug key for personal sideload testing. APK output: app/build/outputs/apk/release/app-release.apk.

@@ -141,12 +141,12 @@ private fun XRecover(prefs: android.content.SharedPreferences, dark: Boolean, th
                     dark, issue, { issue = it }, phone, { phone = it.take(25) }, detail, { detail = it.take(300) },
                     { buildDraft() }, { openWhatsApp() },
                     { openUrl("https://faq.whatsapp.com/465883178708358/") },
-                    { openUrl("https://faq.whatsapp.com/1369114327051380/") }
+                    { openUrl("https://faq.whatsapp.com/684051319521343/") }
                 )
                 "Status" -> StatusScreen(records, { id, state -> updateRecord(id, state) }, { openWhatsApp() }, { openUrl("https://faq.whatsapp.com/465883178708358/") })
                 "FAQ" -> FaqScreen(
                     { openUrl("https://faq.whatsapp.com/465883178708358/") },
-                    { openUrl("https://faq.whatsapp.com/1369114327051380/") },
+                    { openUrl("https://faq.whatsapp.com/684051319521343/") },
                     { openUrl("https://faq.whatsapp.com/1848531392146538/") },
                     { openUrl("https://faq.whatsapp.com/1131652977717250/") }
                 )
@@ -191,7 +191,7 @@ private fun XRecover(prefs: android.content.SharedPreferences, dark: Boolean, th
                 Text("Privasi", fontWeight = FontWeight.SemiBold)
                 Text("Nomor dan keterangan hanya digunakan untuk menyusun teks selama layar ini aktif. Riwayat hanya menyimpan jenis masalah, tanggal, dan status manual.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("Tidak ada login, OTP, kata sandi, API key, izin internet, atau koneksi server XRecover. Aplikasi ini bukan produk resmi WhatsApp.", fontSize = 13.sp)
-                Text("Versi 1.0.0 • Android 10+", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Versi 1.0.1 • Android 10+", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }, confirmButton = { TextButton(onClick = { settings = false }) { Text("Selesai") } }
     )
