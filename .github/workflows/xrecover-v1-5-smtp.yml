@@ -1,4 +1,4 @@
-name: XRecover v1.5.1 SMTP Optimized
+name: XRecover v1.6.0 Auto Templates
 
 on:
   push:
@@ -44,32 +44,32 @@ jobs:
           set -euo pipefail
           APK="xrecover-app/app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='com.teinzz.xrecover' versionCode='7' versionName='1.5.1'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='com.teinzz.xrecover' versionCode='8' versionName='1.6.0'"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "sdkVersion:'29'"
-          cp "$APK" XRecover-v1.5.1.apk
-          sha256sum XRecover-v1.5.1.apk
-          ls -lh XRecover-v1.5.1.apk
+          cp "$APK" XRecover-v1.6.0.apk
+          sha256sum XRecover-v1.6.0.apk
+          ls -lh XRecover-v1.6.0.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: XRecover-v1.5.1-APK
-          path: XRecover-v1.5.1.apk
+          name: XRecover-v1.6.0-APK
+          path: XRecover-v1.6.0.apk
           if-no-files-found: error
           retention-days: 30
 
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: xrecover-v1.5.1
+          tag_name: xrecover-v1.6.0
           target_commitish: xrecover-v1.5-smtp
           name: XRecover v1.5.1 (optimized)
           body: |
-            XRecover v1.5.1 optimized release with code/resource shrinking.
+            XRecover v1.6.0 automatic issue-specific appeal templates with code/resource shrinking.\n            The main screen no longer requires manual report fields.
             - Manual SMTP with visible user-configured host, sender, recipient.
             - TLS required on port 465 (SSL) or 587 (STARTTLS).
             - SMTP password is not persisted.
             - Keeps local status/history, report timeline, FAQ, and theme settings.
             Test release signed with the standard CI debug key.
-          files: XRecover-v1.5.1.apk
+          files: XRecover-v1.6.0.apk
           fail_on_unmatched_files: true
