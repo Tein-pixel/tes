@@ -1,6 +1,6 @@
 # XRecover build status
 
-- Result: failure
-- Run: 40665498501
-- Source commit: 8657b337d921f36f593b2e302a62a4b39bf0daba
-- Updated (UTC): 2026-10-28 09:36:15
+- Result: success
+- Run: 40665642473
+- Source commit: f65579d4f93f60c7f086e43e621566603e89c526
+- Updated (UTC): 2026-10-28 09:40:22
