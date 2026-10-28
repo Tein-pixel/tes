@@ -183,7 +183,16 @@ private fun XRecover(prefs: android.content.SharedPreferences, dark: Boolean) {
         title = { Text("Teks bantuan siap") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Teks disesuaikan dengan jenis masalah. Periksa bagian dalam tanda [ ] sebelum mengirim. Tidak ada jaminan pemulihan; WhatsApp yang menentukan hasilnya.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    when (issue) {
+                        "Banned sementara", "Banned permanen" -> "Periksa dan edit teks sebelum dipakai. Untuk banding ban, gunakan Request review di aplikasi WhatsApp jika tersedia. Form kontak atau aplikasi pihak ketiga tidak dapat mempercepat atau menjamin hasil banding."
+                        "OTP / kode tidak masuk", "Coba lagi nanti" -> "Periksa detail dan ikuti timer resmi. Jangan pernah memasukkan OTP, PIN, kata sandi, atau kode verifikasi ke teks ini."
+                        "Akun diretas / diambil alih" -> "Edit detail sesuai keadaan sebenarnya. Jangan berikan kode registrasi atau PIN kepada siapa pun. Gunakan langkah pemulihan resmi."
+                        else -> "Periksa semua detail dan hapus bagian [ ] yang belum diisi. XRecover hanya menyusun teks; pesan tidak terkirim otomatis."
+                    },
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 OutlinedTextField(value = draft, onValueChange = { draft = it }, modifier = Modifier.fillMaxWidth().height(260.dp), textStyle = MaterialTheme.typography.bodyMedium, shape = RoundedCornerShape(14.dp))
             }
         },
@@ -210,7 +219,7 @@ private fun XRecover(prefs: android.content.SharedPreferences, dark: Boolean) {
                         "Coba lagi nanti" -> openUrl("https://faq.whatsapp.com/1369114327051380/?lang=id_ID")
                         else -> openUrl("https://www.whatsapp.com/contact/?lang=id&subject=messenger")
                     }
-                }) { Text("Salin & buka") }
+                }) { Text("Salin & buka resmi") }
                 TextButton(onClick = { draftDialog = false }) { Text("Tutup") }
             }
         }
