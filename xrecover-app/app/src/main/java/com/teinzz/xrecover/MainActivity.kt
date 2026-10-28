@@ -258,8 +258,6 @@ private fun XRecoverApp() {
                     runCatching { sendEmailSmtp(host, portValue, sender, password, recipient, "Permintaan bantuan akun WhatsApp", body) }
                 }
                 sending = false
-                // Keep the password in memory only when the user opted out of persistence.
-                if (!rememberSmtpPassword) smtpPassword = ""
                 result.onSuccess {
                     addRecord("Dikirim")
                     previewOpen = false
