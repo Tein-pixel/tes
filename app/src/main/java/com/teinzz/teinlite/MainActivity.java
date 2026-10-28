@@ -7,7 +7,6 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.graphics.Color;
-import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.text.Editable;
@@ -69,7 +68,7 @@ public final class MainActivity extends Activity {
                 if (e.getAction() == MotionEvent.ACTION_DOWN) downY = e.getY();
                 if (e.getAction() == MotionEvent.ACTION_MOVE) {
                     float dy = e.getY() - downY;
-                    if (homeScreen && downY > getHeight() * .72f && dy < -dp(55)) {
+                    if (homeScreen && (home.isEmpty() || downY > getHeight() * .72f) && dy < -dp(48)) {
                         showDrawer();
                         return true;
                     }
@@ -114,18 +113,11 @@ public final class MainActivity extends Activity {
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(BLACK);
         root.setPadding(dp(12), dp(8), dp(12), 0);
-        TextView title = new TextView(this);
-        title.setText("Apps");
-        title.setTextColor(WHITE);
-        title.setTextSize(18);
-        title.setTypeface(Typeface.DEFAULT, Typeface.NORMAL);
-        title.setGravity(Gravity.CENTER_VERTICAL);
-        root.addView(title, new LinearLayout.LayoutParams(-1, dp(34)));
         search = new EditText(this);
         search.setSingleLine(true);
         search.setTextColor(WHITE);
         search.setHintTextColor(MUTED);
-        search.setHint("Search apps");
+        search.setHint("Cari aplikasi");
         search.setTextSize(14);
         search.setPadding(dp(12), 0, dp(10), 0);
         search.setBackgroundColor(0xFF151515);
@@ -212,10 +204,10 @@ public final class MainActivity extends Activity {
                 labels[i] = all.get(i).label;
                 checked[i] = picked.contains(all.get(i).key);
             }
-            new AlertDialog.Builder(this).setTitle("Add to home")
+            new AlertDialog.Builder(this).setTitle("Tambah aplikasi")
                     .setMultiChoiceItems(labels, checked, (d, which, yes) -> checked[which] = yes)
-                    .setNegativeButton("Cancel", null)
-                    .setPositiveButton("Save", (d, w) -> {
+                    .setNegativeButton("Batal", null)
+                    .setPositiveButton("Simpan", (d, w) -> {
                         picked.clear();
                         for (int i = 0; i < all.size(); i++) if (checked[i]) picked.add(all.get(i).key);
                         persist();
@@ -233,13 +225,13 @@ public final class MainActivity extends Activity {
             Collections.sort(home, (x, y) -> x.label.compareToIgnoreCase(y.label));
             persist();
             if (homeAdapter != null) homeAdapter.notifyDataSetChanged();
-            Toast.makeText(this, "Added to home", Toast.LENGTH_SHORT).show();
-        } else Toast.makeText(this, "Already on home", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Aplikasi ditambahkan", Toast.LENGTH_SHORT).show();
+        } else Toast.makeText(this, "Sudah ada di layar utama", Toast.LENGTH_SHORT).show();
     }
 
     private void remove(AppItem a) {
-        new AlertDialog.Builder(this).setMessage("Remove " + a.label + " from home?")
-                .setNegativeButton("Cancel", null).setPositiveButton("Remove", (d, w) -> {
+        new AlertDialog.Builder(this).setMessage("Hapus " + a.label + " dari layar utama?")
+                .setNegativeButton("Cancel", null).setPositiveButton("Hapus", (d, w) -> {
                     picked.remove(a.key);
                     home.remove(a);
                     persist();

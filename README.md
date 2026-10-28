@@ -1,20 +1,14 @@
 # TeinLite Blank Launcher
 
-Blank-first Android launcher for Android 10+.
+A minimal Android 10+ launcher built with native Java views.
 
-## How it works
-- The Home screen starts completely empty. No apps are inserted automatically.
-- Long-press the empty Home screen to choose which apps to add.
-- Swipe up from the bottom of Home to open the app drawer.
+- The home screen starts completely empty.
+- Swipe up from the blank home screen to open the app drawer.
+- Tap an app in the drawer to open it.
 - Long-press an app in the drawer to add it to Home.
-- Tap an app on Home to launch it; long-press it to remove it.
+- Long-press an empty Home area to open the add-app picker.
+- Long-press an app already on Home to remove it.
 - Home selections are saved locally.
+- No network permission, ads, third-party UI libraries, wallpaper loading, widgets, animations, or background service.
 
-## Lightweight design
-Native Java views only: no third-party UI libraries, no network permission, no ads, no analytics, no services, no polling and no decorative animations. Installed apps are scanned only when the drawer or picker is opened; selected Home icons load on a worker thread.
-
-## Strict size target
-GitHub Actions measures the final signed APK in bytes. The workflow only publishes a direct release when the APK is **20,000 bytes or smaller**; it always uploads the artifact so a larger result can be inspected. The size has to be measured after compiling.
-
-## Performance limits
-A mostly static native screen avoids continuous animation and background work, but 60 FPS and device temperature depend on the device, firmware, refresh rate and other running apps; they cannot be guaranteed by APK size alone.
+The release workflow measures the real APK size and reports its SHA-256. It warns if the APK exceeds 16 KiB and retains build artifacts if it exceeds the 20,000-byte target. APK size and smoothness must be measured on the actual build and device; 60 FPS cannot be guaranteed on every phone.
