@@ -11,6 +11,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
@@ -52,7 +53,7 @@ import java.util.UUID
 private const val PREFS = "xrecover_local"
 private const val HISTORY = "history"
 private const val THEME = "theme"
-private val Accent = Color(0xFF9AB9FF)
+private val Accent = Color(0xFFF5F5F5)
 private val IssueTypes = listOf("Banned sementara", "Banned permanen", "Akun dibatasi (Restricted)", "OTP / kode tidak masuk", "Coba lagi nanti", "Akun diretas / diambil alih", "Masalah lain")
 private val StatusTypes = listOf("Belum dikirim", "Dikirim", "Selesai")
 
@@ -63,20 +64,24 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             val prefs = remember { getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
-            var theme by remember { mutableStateOf(prefs.getString(THEME, "Gelap") ?: "Gelap") }
-            val dark = when (theme) { "Gelap" -> true; "Terang" -> false; else -> isSystemInDarkTheme() }
-            val scheme = if (dark) darkColorScheme(
-                primary = Accent, onPrimary = Color(0xFF0D1424), background = Color(0xFF0C0D0F),
-                surface = Color(0xFF15171A), surfaceVariant = Color(0xFF202328),
-                onBackground = Color(0xFFF4F5F6), onSurface = Color(0xFFF4F5F6),
-                onSurfaceVariant = Color(0xFFACB0B7), outline = Color(0xFF383B42)
-            ) else lightColorScheme(
-                primary = Color(0xFF315EA8), onPrimary = Color.White, background = Color(0xFFF4F5F7),
-                surface = Color.White, surfaceVariant = Color(0xFFE9ECF1), onBackground = Color(0xFF191B1F),
-                onSurface = Color(0xFF191B1F), onSurfaceVariant = Color(0xFF60656D), outline = Color(0xFFD0D4DB)
+            val dark = true
+            val scheme = darkColorScheme(
+                primary = Color(0xFFF5F5F5),
+                onPrimary = Color(0xFF080808),
+                primaryContainer = Color(0xFF292929),
+                onPrimaryContainer = Color(0xFFF8F8F8),
+                secondary = Color(0xFFD4D4D4),
+                onSecondary = Color(0xFF080808),
+                background = Color(0xFF080808),
+                surface = Color(0xFF131313),
+                surfaceVariant = Color(0xFF202020),
+                onBackground = Color(0xFFF7F7F7),
+                onSurface = Color(0xFFF7F7F7),
+                onSurfaceVariant = Color(0xFFB5B5B5),
+                outline = Color(0xFF393939)
             )
             MaterialTheme(colorScheme = scheme) {
-                XRecover(prefs, dark, theme) { next -> theme = next; prefs.edit().putString(THEME, next).apply() }
+                XRecover(prefs, dark)
             }
         }
     }
@@ -84,7 +89,7 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun XRecover(prefs: android.content.SharedPreferences, dark: Boolean, theme: String, setTheme: (String) -> Unit) {
+private fun XRecover(prefs: android.content.SharedPreferences, dark: Boolean) {
     val records = remember { mutableStateListOf<RequestRecord>().apply { addAll(loadRecords(prefs)) } }
     var page by remember { mutableStateOf("Pulihkan") }
     var settings by remember { mutableStateOf(false) }
@@ -111,21 +116,30 @@ private fun XRecover(prefs: android.content.SharedPreferences, dark: Boolean, th
         storeRecords(prefs, records)
     }
     fun buildDraft() {
-        val number = phone.trim().takeIf { it.isNotEmpty() }?.let { "Nomor WhatsApp terkait: " + it + "\n" } ?: "[Tambahkan nomor WhatsApp dengan kode negara, misalnya +62…, jika formulir dukungan memintanya.]"
-        val extra = detail.trim().takeIf { it.isNotEmpty() }?.let { it } ?: "[Jelaskan pesan kesalahan persis seperti yang muncul, kapan masalah mulai terjadi, dan langkah yang sudah dicoba. Jangan sertakan kode OTP atau PIN.]"
-        val issueDescription = when (issue) {
-            "Banned sementara" -> "Akun saya menampilkan pemberitahuan pembatasan atau ban sementara. Saya ingin mengetahui penyebab yang mungkin dan langkah resmi untuk kembali menggunakan aplikasi. Jika ada instruksi atau hitung mundur pada layar, saya akan mengikuti instruksi tersebut."
-            "Banned permanen" -> "Akun saya menampilkan pemberitahuan bahwa akun tidak diizinkan menggunakan WhatsApp. Jika opsi peninjauan tersedia di aplikasi, saya ingin mengajukan pemeriksaan atas keputusan tersebut. Mohon tinjau kasus ini dan beri tahu apakah ada langkah resmi lain yang dapat saya lakukan."
-            "Akun dibatasi (Restricted)" -> "Akun saya tampak dibatasi dan beberapa fitur tidak dapat digunakan sebagaimana mestinya. Mohon jelaskan alasan pembatasan dan langkah resmi untuk memulihkan akses fitur jika memungkinkan."
-            "OTP / kode tidak masuk" -> "Saya belum menerima kode registrasi atau kode verifikasi yang diperlukan untuk masuk. Saya akan memastikan nomor dan kode negara benar serta mengikuti waktu tunggu yang ditampilkan. Mohon sarankan langkah pemecahan masalah resmi berikutnya."
-            "Coba lagi nanti" -> "Saya melihat pesan untuk mencoba lagi nanti saat meminta kode atau menggunakan akun. Saya akan mengikuti waktu tunggu yang ditampilkan dan menghindari permintaan berulang. Mohon informasikan langkah yang tepat jika masalah tetap terjadi setelah waktu tunggu berakhir."
-            "Akun diretas / diambil alih" -> "Saya khawatir akun saya diakses atau diambil alih pihak lain. Mohon panduan untuk mengamankan kembali akun melalui proses verifikasi resmi. Saya tidak akan membagikan kode registrasi atau PIN kepada siapa pun."
-            else -> "Saya mengalami masalah pada akun atau aplikasi WhatsApp dan memerlukan bantuan untuk menentukan langkah penanganan yang benar."
+        val number = phone.trim().takeIf { it.isNotEmpty() }
+            ?.let { "Nomor WhatsApp: $it" }
+            ?: "Nomor WhatsApp: [masukkan nomor dengan kode negara, jika diperlukan]"
+        val chronology = detail.trim().takeIf { it.isNotEmpty() }
+            ?: "[Tambahkan pesan persis di layar, waktu mulai terjadi, dan langkah yang sudah dicoba. Jangan masukkan OTP atau PIN.]"
+        val description = when (issue) {
+            "Banned sementara" -> "WhatsApp menampilkan pemberitahuan pembatasan sementara pada akun saya. Saya ingin memahami alasan dan langkah yang diperbolehkan untuk menyelesaikan masalah ini. Saya akan mengikuti waktu tunggu atau instruksi yang ditampilkan di aplikasi resmi dan tidak akan mencoba menghindari pembatasan."
+            "Banned permanen" -> "WhatsApp menampilkan pemberitahuan bahwa nomor saya tidak dapat menggunakan layanan. Saya meminta peninjauan atas keputusan tersebut apabila tombol Request review tersedia di aplikasi. Mohon periksa kasus ini berdasarkan informasi yang saya berikan; saya memahami bahwa keputusan akhir berada pada WhatsApp."
+            "Akun dibatasi (Restricted)" -> "Akun saya menunjukkan pembatasan fitur. Mohon jelaskan langkah resmi yang dapat saya tempuh untuk memahami pembatasan ini dan memulihkan fitur jika akun memenuhi ketentuan."
+            "OTP / kode tidak masuk" -> "Saya tidak menerima kode registrasi yang diperlukan. Saya akan memastikan nomor dan kode negara benar, memastikan SIM dapat menerima SMS atau panggilan, dan menunggu penghitung waktu sebelum meminta kode lagi. Mohon panduan tambahan jika masalah masih berlanjut."
+            "Coba lagi nanti" -> "Aplikasi menampilkan pesan agar saya mencoba lagi nanti. Saya akan mengikuti waktu tunggu yang diberikan dan tidak meminta kode berulang kali untuk menghindari pembatasan tambahan. Mohon saran langkah resmi jika pesan tetap muncul setelah waktu tunggu selesai."
+            "Akun diretas / diambil alih" -> "Saya khawatir akun saya diakses oleh orang lain. Mohon arahkan saya ke langkah resmi untuk mengamankan dan mendaftarkan kembali nomor saya. Saya tidak akan membagikan kode registrasi atau PIN kepada pihak mana pun."
+            else -> "Saya mengalami kendala pada akun atau aplikasi WhatsApp dan ingin mengetahui penyebab yang mungkin serta langkah pemecahan masalah yang sesuai."
         }
-        draft = "Yth. Tim Dukungan WhatsApp,\n\nSaya menghubungi tim dukungan untuk meminta bantuan terkait masalah akun saya.\n\nJENIS MASALAH\n" + issue + "\n\nKRONOLOGI DAN KETERANGAN\n" + extra + "\n\nINFORMASI AKUN\n" + number + "\n\nRINCIAN MASALAH\n" + issueDescription + "\n\nPERMOHONAN\nMohon periksa informasi yang saya sampaikan dan arahkan saya ke langkah pemulihan atau peninjauan resmi yang sesuai. Jika ada informasi tambahan yang diperlukan, mohon beri tahu melalui saluran dukungan resmi. Saya bersedia mengikuti proses verifikasi yang tersedia di aplikasi resmi.\n\nTerima kasih atas waktu dan bantuannya.\n\nHormat saya,\nPengguna WhatsApp"
+        draft = "Yth. Tim Dukungan WhatsApp,\n\n" +
+            "Saya menghubungi tim dukungan untuk meminta bantuan terkait kendala akun WhatsApp yang saya alami.\n\n" +
+            "JENIS MASALAH\n$issue\n\n" +
+            "INFORMASI AKUN\n$number\n\n" +
+            "KRONOLOGI DAN RINCIAN\n$chronology\n\n" +
+            "PENJELASAN MASALAH\n$description\n\n" +
+            "PERMOHONAN\nMohon tinjau informasi ini dan arahkan saya ke prosedur resmi yang sesuai dengan jenis masalah di atas. Apabila ada informasi tambahan yang diperlukan, mohon beri tahu melalui saluran dukungan resmi. Saya akan mengikuti ketentuan dan proses verifikasi resmi yang berlaku.\n\n" +
+            "Terima kasih atas waktu dan bantuannya.\n\nHormat saya,\nPengguna WhatsApp"
         draftDialog = true
     }
-
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
@@ -169,7 +183,7 @@ private fun XRecover(prefs: android.content.SharedPreferences, dark: Boolean, th
         title = { Text("Teks bantuan siap") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Periksa dan edit sebelum dikirim. XRecover tidak mengirim apa pun ke WhatsApp secara otomatis.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Teks disesuaikan dengan jenis masalah. Periksa bagian dalam tanda [ ] sebelum mengirim. Tidak ada jaminan pemulihan; WhatsApp yang menentukan hasilnya.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 OutlinedTextField(value = draft, onValueChange = { draft = it }, modifier = Modifier.fillMaxWidth().height(260.dp), textStyle = MaterialTheme.typography.bodyMedium, shape = RoundedCornerShape(14.dp))
             }
         },
@@ -185,22 +199,39 @@ private fun XRecover(prefs: android.content.SharedPreferences, dark: Boolean, th
                     val share = Intent(Intent.ACTION_SEND).apply { type = "text/plain"; putExtra(Intent.EXTRA_TEXT, draft) }
                     context.startActivity(Intent.createChooser(share, "Bagikan teks bantuan")); saveRecord(); draftDialog = false
                 }) { Text("Bagikan") }
+                TextButton(onClick = {
+                    (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Teks bantuan XRecover", draft))
+                    saveRecord()
+                    draftDialog = false
+                    notifyUser("Teks disalin. Tempel di jalur dukungan resmi.")
+                    when (issue) {
+                        "Banned sementara", "Banned permanen" -> openWhatsApp()
+                        "OTP / kode tidak masuk" -> openUrl("https://faq.whatsapp.com/1369114327051380/?lang=id_ID")
+                        "Coba lagi nanti" -> openUrl("https://faq.whatsapp.com/1369114327051380/?lang=id_ID")
+                        else -> openUrl("https://www.whatsapp.com/contact/?lang=id&subject=messenger")
+                    }
+                }) { Text("Salin & buka") }
                 TextButton(onClick = { draftDialog = false }) { Text("Tutup") }
             }
         }
     )
 
     if (settings) AlertDialog(
-        onDismissRequest = { settings = false }, title = { Text("Pengaturan & keamanan") },
+        onDismissRequest = { settings = false }, title = { Text("Pengaturan & privasi") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Tema tampilan", fontWeight = FontWeight.SemiBold)
-                Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) { listOf("Gelap", "Terang", "Sistem").forEach { ChoiceChip(it, theme == it) { setTheme(it) } } }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                    Icon(Icons.Outlined.Shield, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+                    Column {
+                        Text("Mode gelap hitam-putih", fontWeight = FontWeight.SemiBold)
+                        Text("Kontras jelas • aksen glossy tipis", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
                 HorizontalDivider()
                 Text("Privasi", fontWeight = FontWeight.SemiBold)
-                Text("Nomor dan keterangan hanya digunakan untuk menyusun teks selama layar ini aktif. Riwayat hanya menyimpan jenis masalah, tanggal, dan status manual.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("Tidak ada login, OTP, kata sandi, API key, izin internet, atau koneksi server XRecover. Aplikasi ini bukan produk resmi WhatsApp.", fontSize = 13.sp)
-                Text("Versi 1.0.1 • Android 10+", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("XRecover tidak meminta kata sandi email, kata sandi WhatsApp, OTP, PIN, atau API key. Teks dibuat di perangkat. Riwayat hanya menyimpan jenis masalah, tanggal, dan status manual.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Pengiriman dilakukan oleh kamu melalui WhatsApp atau formulir dukungan resmi. XRecover tidak menyatakan pesan terkirim sebelum saluran resmi mengonfirmasinya.", fontSize = 13.sp)
+                Text("Versi 1.1.0 • Android 10+", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }, confirmButton = { TextButton(onClick = { settings = false }) { Text("Selesai") } }
     )
@@ -211,8 +242,8 @@ private fun RecoverScreen(dark: Boolean, issue: String, setIssue: (String) -> Un
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("AKUN WHATSAPP\nBERMASALAH?", fontWeight = FontWeight.ExtraBold, fontSize = 27.sp, lineHeight = 29.sp, letterSpacing = (-.5).sp)
         Text("Pilih masalah dan ikuti langkah resmi.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Card(shape = RoundedCornerShape(22.dp), border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .6f)), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
+        Card(shape = RoundedCornerShape(22.dp), border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .75f)), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+            Column(Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Color.White.copy(alpha = .065f), Color.White.copy(alpha = .012f))), RoundedCornerShape(22.dp)).padding(16.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Box(Modifier.size(43.dp).clip(RoundedCornerShape(13.dp)).background(Accent.copy(alpha = .17f)), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Shield, null, tint = if (dark) Accent else Color(0xFF315EA8), modifier = Modifier.size(24.dp)) }
                     Column { Text("Pulihkan akses", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Panduan lokal • tanpa login", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) }
