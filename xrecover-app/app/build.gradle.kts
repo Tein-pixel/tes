@@ -26,7 +26,16 @@ android {
     }
     kotlinOptions { jvmTarget = "17" }
     buildFeatures { compose = true }
-    packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
+    packaging {
+        resources.excludes += setOf(
+            "/META-INF/AL2.0",
+            "/META-INF/LGPL2.1",
+            "/META-INF/NOTICE.md",
+            "/META-INF/LICENSE.md",
+            "/META-INF/NOTICE",
+            "/META-INF/LICENSE"
+        )
+    }
 }
 dependencies {
     val composeBom = platform("androidx.compose:compose-bom:2024.09.00")
