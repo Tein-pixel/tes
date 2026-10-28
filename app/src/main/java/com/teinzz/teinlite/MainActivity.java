@@ -1,6 +1,8 @@
 package com.teinzz.teinlite;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -14,9 +16,11 @@ import android.text.InputType;
 import android.view.inputmethod.EditorInfo;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.BaseAdapter;
@@ -40,6 +44,7 @@ public final class MainActivity extends Activity {
     private GridView homeGrid, drawerGrid;
     private AppsAdapter homeAdapter, drawerAdapter;
     private boolean drawer;
+    private int touchSlop;
 
     private int dp(float n) { return (int)(n * getResources().getDisplayMetrics().density + .5f); }
 
@@ -48,10 +53,45 @@ public final class MainActivity extends Activity {
         Window w = getWindow();
         w.setStatusBarColor(Color.BLACK);
         w.setNavigationBarColor(Color.BLACK);
+        touchSlop = ViewConfiguration.get(this).getScaledTouchSlop();
         Set<String> old = getSharedPreferences("home", 0).getStringSet("apps", null);
         if (old != null) picked.addAll(old);
         showHome();
         loadApps();
+        if (homeGrid != null) homeGrid.post(this::promptDefaultHomeIfNeeded);
+    }
+
+    private boolean isDefaultHome() {
+        Intent homeIntent = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME);
+        ResolveInfo homeInfo = getPackageManager().resolveActivity(homeIntent, PackageManager.MATCH_DEFAULT_ONLY);
+        return homeInfo != null && homeInfo.activityInfo != null
+                && getPackageName().equals(homeInfo.activityInfo.packageName);
+    }
+
+    private void promptDefaultHomeIfNeeded() {
+        if (isFinishing() || isDefaultHome()) return;
+        android.content.SharedPreferences setup = getSharedPreferences("setup", 0);
+        if (setup.getBoolean("home_prompt_shown", false)) return;
+        setup.edit().putBoolean("home_prompt_shown", true).apply();
+        new AlertDialog.Builder(this)
+                .setTitle("Jadikan TeinLite launcher utama?")
+                .setMessage("Pilih TeinLite di pengaturan Home agar tombol Home tidak kembali ke launcher bawaan.")
+                .setNegativeButton("Nanti", null)
+                .setPositiveButton("Pilih sekarang", (dialog, which) -> {
+                    try {
+                        startActivity(new Intent(Settings.ACTION_HOME_SETTINGS));
+                    } catch (ActivityNotFoundException ignored) {
+                        try { startActivity(new Intent(Settings.ACTION_SETTINGS)); }
+                        catch (ActivityNotFoundException ignoredAgain) { }
+                    }
+                })
+                .show();
+    }
+
+    @Override protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        showHome();
     }
 
     private void loadApps() {
@@ -78,33 +118,8 @@ public final class MainActivity extends Activity {
         }, "tl-apps").start();
     }
 
-    private GridView grid(boolean homeScreen) {
-        GridView g = new GridView(this) {
-            float downX, downY;
-            boolean drawerStartedAtTop;
-            @Override public boolean onInterceptTouchEvent(MotionEvent e) {
-                if (e.getAction() == MotionEvent.ACTION_DOWN) {
-                    downX = e.getX();
-                    downY = e.getY();
-                    drawerStartedAtTop = getFirstVisiblePosition() == 0 &&
-                            (getChildCount() == 0 || getChildAt(0).getTop() >= getPaddingTop() - dp(2));
-                }
-                if (e.getAction() == MotionEvent.ACTION_MOVE) {
-                    float dx = e.getX() - downX, dy = e.getY() - downY;
-                    if (Math.abs(dy) > Math.abs(dx) * 1.2f) {
-                        if (homeScreen && dy < -dp(48)) {
-                            showDrawer();
-                            return true;
-                        }
-                        if (!homeScreen && drawerStartedAtTop && dy > dp(55)) {
-                            showHome();
-                            return true;
-                        }
-                    }
-                }
-                return super.onInterceptTouchEvent(e);
-            }
-        };
+    private GridView grid() {
+        GridView g = new GridView(this);
         g.setNumColumns(4);
         g.setColumnWidth(dp(68));
         g.setStretchMode(GridView.STRETCH_COLUMN_WIDTH);
@@ -115,12 +130,11 @@ public final class MainActivity extends Activity {
         g.setCacheColorHint(Color.BLACK);
         return g;
     }
-
     private void showHome() {
         drawer = false;
-        FrameLayout root = new FrameLayout(this);
+        GestureRoot root = new GestureRoot(true);
         root.setBackgroundColor(Color.BLACK);
-        homeGrid = grid(true);
+        homeGrid = grid();
         homeAdapter = new AppsAdapter(home);
         homeGrid.setAdapter(homeAdapter);
         homeGrid.setOnItemClickListener((p, v, pos, id) -> launch(home.get(pos)));
@@ -147,8 +161,12 @@ public final class MainActivity extends Activity {
 
     private void showDrawer() {
         drawer = true;
-        DrawerRoot root = new DrawerRoot();
+        GestureRoot root = new GestureRoot(false);
         root.setPadding(dp(10), dp(8), dp(10), 0);
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setBackgroundColor(Color.BLACK);
+        root.addView(content, new FrameLayout.LayoutParams(-1, -1));
 
         searchInput = new EditText(this);
         searchInput.setSingleLine(true);
@@ -162,11 +180,11 @@ public final class MainActivity extends Activity {
         searchInput.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
         LinearLayout.LayoutParams searchParams = new LinearLayout.LayoutParams(-1, dp(46));
         searchParams.bottomMargin = dp(5);
-        root.addView(searchInput, searchParams);
+        content.addView(searchInput, searchParams);
 
         shown.clear();
         shown.addAll(apps);
-        drawerGrid = grid(false);
+        drawerGrid = grid();
         drawerGrid.setPadding(dp(3), dp(5), dp(3), dp(12));
         drawerAdapter = new AppsAdapter(shown);
         drawerGrid.setAdapter(drawerAdapter);
@@ -181,7 +199,7 @@ public final class MainActivity extends Activity {
             }
             return true;
         });
-        root.addView(drawerGrid, new LinearLayout.LayoutParams(-1, 0, 1));
+        content.addView(drawerGrid, new LinearLayout.LayoutParams(-1, 0, 1));
         searchInput.addTextChangedListener(new TextWatcher() {
             public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
             public void onTextChanged(CharSequence s, int start, int before, int count) { filterApps(s.toString()); }
@@ -207,7 +225,7 @@ public final class MainActivity extends Activity {
     }
 
     @Override public void onBackPressed() {
-        if (drawer) showHome(); else super.onBackPressed();
+        if (drawer) showHome();
     }
 
     private final class AppsAdapter extends BaseAdapter {
@@ -246,29 +264,67 @@ public final class MainActivity extends Activity {
     }
 
 
-    private final class DrawerRoot extends LinearLayout {
-        private float startX, startY;
-        private boolean startAtTop;
-        DrawerRoot() {
+    private final class GestureRoot extends FrameLayout {
+        private final boolean homeSurface;
+        private float downX, downY;
+        private boolean startedAtTop;
+        private boolean transitionPosted;
+        private int transition;
+
+        GestureRoot(boolean homeSurface) {
             super(MainActivity.this);
-            setOrientation(VERTICAL);
+            this.homeSurface = homeSurface;
             setBackgroundColor(Color.BLACK);
         }
-        @Override public boolean onInterceptTouchEvent(MotionEvent e) {
-            if (e.getAction() == MotionEvent.ACTION_DOWN) {
-                startX = e.getX();
-                startY = e.getY();
-                startAtTop = drawerGrid == null || (drawerGrid.getFirstVisiblePosition() == 0 &&
-                        (drawerGrid.getChildCount() == 0 ||
-                        drawerGrid.getChildAt(0).getTop() >= drawerGrid.getPaddingTop() - dp(2)));
-            } else if (e.getAction() == MotionEvent.ACTION_MOVE && startAtTop) {
-                float dx = e.getX() - startX, dy = e.getY() - startY;
-                if (dy > dp(55) && Math.abs(dy) > Math.abs(dx) * 1.2f) {
-                    showHome();
-                    return true;
-                }
+
+        private boolean drawerIsAtTop() {
+            if (drawerGrid == null || drawerGrid.getChildCount() == 0) return true;
+            return drawerGrid.getFirstVisiblePosition() == 0
+                    && drawerGrid.getChildAt(0).getTop() >= drawerGrid.getPaddingTop() - dp(2);
+        }
+
+        @Override public boolean onInterceptTouchEvent(MotionEvent event) {
+            switch (event.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN:
+                    downX = event.getX();
+                    downY = event.getY();
+                    startedAtTop = homeSurface || drawerIsAtTop();
+                    transition = 0;
+                    transitionPosted = false;
+                    break;
+                case MotionEvent.ACTION_MOVE:
+                    if (transition == 0) {
+                        float dx = event.getX() - downX;
+                        float dy = event.getY() - downY;
+                        if (Math.abs(dy) >= touchSlop * 2
+                                && Math.abs(dy) > Math.abs(dx) * 1.2f) {
+                            if (homeSurface && dy < 0) {
+                                transition = 1;
+                                return true;
+                            }
+                            if (!homeSurface && startedAtTop && dy > 0) {
+                                transition = 2;
+                                return true;
+                            }
+                        }
+                    }
+                    break;
             }
-            return super.onInterceptTouchEvent(e);
+            return super.onInterceptTouchEvent(event);
+        }
+
+        @Override public boolean onTouchEvent(MotionEvent event) {
+            if (transition == 0) return super.onTouchEvent(event);
+            if (event.getActionMasked() == MotionEvent.ACTION_MOVE && !transitionPosted) {
+                transitionPosted = true;
+                final int next = transition;
+                post(() -> {
+                    if (isFinishing()) return;
+                    if (next == 1 && !drawer) showDrawer();
+                    else if (next == 2 && drawer) showHome();
+                });
+            }
+            return true;
         }
     }
 
