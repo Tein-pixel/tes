@@ -1,4 +1,4 @@
-# XRecover v1.5.0
+# XRecover v1.5.1
 
 Android 10+ (API 29+) app to compose a support report and keep local status/history.
 
@@ -7,6 +7,7 @@ Android 10+ (API 29+) app to compose a support report and keep local status/hist
 - Editable report preview, copy/share actions, local history and manually updated status.
 - FAQ, official WhatsApp contact page, dark/light/system theme.
 - Manual SMTP using host, port, sender, recipient and app password entered by the user.
+- Release build uses R8 and resource shrinking to avoid packaging unused icon code.
 
 ## SMTP safety
 - No hidden SMTP endpoint or hardcoded recipient.
