@@ -44,30 +44,33 @@ jobs:
         run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
 
       - name: Build debug APK
-        run: gradle --no-daemon --stacktrace assembleDebug
+        run: gradle --no-daemon --stacktrace assembleRelease
+
+      - name: Prepare APK filename
+        run: cp app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/XRecover.apk
 
       - name: Verify APK exists
-        run: test -s app/build/outputs/apk/debug/app-debug.apk
+        run: test -s app/build/outputs/apk/release/XRecover.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: XRecover-debug-APK
-          path: xrecover/app/build/outputs/apk/debug/app-debug.apk
+          name: XRecover-release-APK
+          path: xrecover/app/build/outputs/apk/release/XRecover.apk
           if-no-files-found: error
           retention-days: 14
 
       - name: Publish installable APK release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: xrecover-v1-build
+          tag_name: xrecover-v1.0.0
           target_commitish: xrecover-v1
           name: XRecover v1.0.0 (Android 10+)
           body: |
-            Installable debug APK for XRecover.
+            Optimized installable APK for XRecover.
             Minimum Android: 10 (API 29).
             This app is an independent guide and is not affiliated with WhatsApp.
-          files: xrecover/app/build/outputs/apk/debug/app-debug.apk
+          files: xrecover/app/build/outputs/apk/release/XRecover.apk
           fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
