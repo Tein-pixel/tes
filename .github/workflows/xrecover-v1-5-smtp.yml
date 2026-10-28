@@ -1,4 +1,4 @@
-name: XRecover v1.6.0 Auto Templates
+name: XRecover v1.7.0 Secure SMTP Password
 
 on:
   push:
@@ -38,38 +38,42 @@ jobs:
       - name: Build optimized release APK
         run: gradle -p xrecover-app assembleRelease --no-daemon
 
-      - name: Verify APK metadata and report size
+      - name: Verify APK metadata, target SDK, and report size
         shell: bash
         run: |
           set -euo pipefail
           APK="xrecover-app/app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='com.teinzz.xrecover' versionCode='8' versionName='1.6.0'"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "sdkVersion:'29'"
-          cp "$APK" XRecover-v1.6.0.apk
-          sha256sum XRecover-v1.6.0.apk
-          ls -lh XRecover-v1.6.0.apk
+          BADGING="$("$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK")"
+          echo "$BADGING" | grep -F "package: name='com.teinzz.xrecover' versionCode='9' versionName='1.7.0'"
+          echo "$BADGING" | grep -F "sdkVersion:'29'"
+          echo "$BADGING" | grep -F "targetSdkVersion:'34'"
+          cp "$APK" XRecover-v1.7.0.apk
+          sha256sum XRecover-v1.7.0.apk
+          ls -lh XRecover-v1.7.0.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: XRecover-v1.6.0-APK
-          path: XRecover-v1.6.0.apk
+          name: XRecover-v1.7.0-APK
+          path: XRecover-v1.7.0.apk
           if-no-files-found: error
           retention-days: 30
 
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: xrecover-v1.6.0
+          tag_name: xrecover-v1.7.0
           target_commitish: xrecover-v1.5-smtp
-          name: XRecover v1.6.0 (automatic templates)
+          name: XRecover v1.7.0 Secure SMTP Password
           body: |
-            XRecover v1.6.0 automatic issue-specific appeal templates with code/resource shrinking.\n            The main screen no longer requires manual report fields.
-            - Manual SMTP with visible user-configured host, sender, recipient.
-            - TLS required on port 465 (SSL) or 587 (STARTTLS).
-            - SMTP password is not persisted.
-            - Keeps local status/history, report timeline, FAQ, and theme settings.
+            XRecover v1.7.0 keeps issue-specific auto templates and adds encrypted SMTP password storage.
+            - App Password uses AndroidX EncryptedSharedPreferences with an AES-256-GCM MasterKey.
+            - Option to remember the password securely or keep it in memory for the current app session.
+            - Save validates normalized App Password length (16 characters).
+            - Password visibility toggle and clear-saved-password action.
+            - Corrects smpt.gmail.com to smtp.gmail.com.
+            - SMTP still requires user-configured recipient and TLS on port 465 or 587.
             Test release signed with the standard CI debug key.
-          files: XRecover-v1.6.0.apk
+          files: XRecover-v1.7.0.apk
           fail_on_unmatched_files: true
