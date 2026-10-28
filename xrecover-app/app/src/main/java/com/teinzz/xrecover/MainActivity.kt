@@ -88,13 +88,13 @@ private fun XRecoverApp() {
         val records = remember { mutableStateListOf<Record>().apply { addAll(loadRecords(prefs)) } }
         val scope = rememberCoroutineScope()
         var page by remember { mutableStateOf("Pulihkan") }
-        var issue by remember { mutableStateOf(Issues.first()) }
-        var phone by remember { mutableStateOf("") }
-        var errorMessage by remember { mutableStateOf("") }
-        var startedAt by remember { mutableStateOf("") }
-        var triedSteps by remember { mutableStateOf("") }
-        var notes by remember { mutableStateOf("") }
-        var draft by remember { mutableStateOf("") }
+        var issue by remember { mutableStateOf(prefs.getString("draft_issue", Issues.first()) ?: Issues.first()) }
+        var phone by remember { mutableStateOf(prefs.getString("draft_phone", "") ?: "") }
+        var errorMessage by remember { mutableStateOf(prefs.getString("draft_error", "") ?: "") }
+        var startedAt by remember { mutableStateOf(prefs.getString("draft_started", "") ?: "") }
+        var triedSteps by remember { mutableStateOf(prefs.getString("draft_steps", "") ?: "") }
+        var notes by remember { mutableStateOf(prefs.getString("draft_notes", "") ?: "") }
+        var draft by remember { mutableStateOf(prefs.getString("report_draft", "") ?: "") }
         var previewOpen by remember { mutableStateOf(false) }
         var settingsOpen by remember { mutableStateOf(false) }
         var smtpOpen by remember { mutableStateOf(false) }
@@ -104,6 +104,20 @@ private fun XRecoverApp() {
         var smtpTo by remember { mutableStateOf(prefs.getString("smtp_to", "") ?: "") }
         var smtpPassword by remember { mutableStateOf("") }
         var sending by remember { mutableStateOf(false) }
+        var testingSmtp by remember { mutableStateOf(false) }
+        var smtpFeedback by remember { mutableStateOf("") }
+
+        LaunchedEffect(issue, phone, errorMessage, startedAt, triedSteps, notes, draft) {
+            prefs.edit()
+                .putString("draft_issue", issue)
+                .putString("draft_phone", phone)
+                .putString("draft_error", errorMessage)
+                .putString("draft_started", startedAt)
+                .putString("draft_steps", triedSteps)
+                .putString("draft_notes", notes)
+                .putString("report_draft", draft)
+                .apply()
+        }
 
         fun toast(message: String) = Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
         fun openUrl(url: String) {
@@ -129,6 +143,31 @@ private fun XRecoverApp() {
                 lines + "\n\nMohon periksa masalah ini dan informasikan langkah resmi yang perlu dilakukan.\n\nTerima kasih."
             previewOpen = true
         }
+        fun testSmtp() {
+            val portValue = smtpPort.toIntOrNull()
+            val sender = smtpUser.trim()
+            if (smtpHost.isBlank() || portValue == null || (portValue != 465 && portValue != 587) ||
+                sender.isBlank() || smtpPassword.isBlank() ||
+                !Patterns.EMAIL_ADDRESS.matcher(sender).matches()) {
+                smtpFeedback = "Isi host, port 465/587, email pengirim, dan app password untuk menguji koneksi."
+                return
+            }
+            val host = smtpHost.trim()
+            val password = smtpPassword
+            testingSmtp = true
+            smtpFeedback = "Menghubungkan ke server dan memeriksa autentikasi…"
+            scope.launch {
+                val result = withContext(Dispatchers.IO) {
+                    runCatching { testSmtpConnection(host, portValue, sender, password) }
+                }
+                testingSmtp = false
+                smtpFeedback = result.fold(
+                    onSuccess = { "Koneksi dan autentikasi SMTP berhasil. Tidak ada email yang dikirim." },
+                    onFailure = { smtpDiagnostic(it) }
+                )
+            }
+        }
+
         fun sendSmtp() {
             val portValue = smtpPort.toIntOrNull()
             if (smtpHost.isBlank() || smtpUser.isBlank() || smtpTo.isBlank() || smtpPassword.isBlank() ||
@@ -161,7 +200,8 @@ private fun XRecoverApp() {
                     previewOpen = false
                     toast("Server SMTP menerima email.")
                 }.onFailure {
-                    toast("SMTP gagal. Periksa host, port, jaringan, penerima, dan app password.")
+                    smtpFeedback = smtpDiagnostic(it)
+                    toast(smtpFeedback)
                 }
             }
         }
@@ -172,7 +212,7 @@ private fun XRecoverApp() {
                 TopAppBar(
                     title = { Column {
                         Text("XRecover", fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                        Text("Panduan akun WhatsApp • v1.5.0", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Panduan akun WhatsApp • v1.6.0", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     } },
                     actions = { IconButton(onClick = { settingsOpen = true }) { Icon(Icons.Outlined.Settings, "Pengaturan") } },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
@@ -218,7 +258,9 @@ private fun XRecoverApp() {
                     OutlinedButton(onClick = { openUrl("https://www.whatsapp.com/contact/?lang=id&subject=messenger") }, modifier = Modifier.fillMaxWidth()) {
                         Text("Kontak resmi WhatsApp")
                     }
-                    Text("XRecover bukan aplikasi resmi WhatsApp. Aplikasi ini tidak bisa membatalkan ban atau menjamin permintaan disetujui.",
+                    Text("XRecover bukan aplikasi resmi WhatsApp dan tidak bisa membatalkan ban atau menjamin permintaan disetujui.",
+                        fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Form dan draf disimpan lokal di perangkat. Data tidak dikirim ke server XRecover; pengiriman email hanya terjadi setelah kamu menekan Kirim SMTP.",
                         fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 "Status" -> Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(16.dp),
@@ -267,6 +309,7 @@ private fun XRecoverApp() {
                     Text("Periksa isi dan alamat penerima sebelum mengirim.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     OutlinedTextField(draft, { draft = it }, Modifier.fillMaxWidth().height(250.dp), maxLines = 12)
                     if (smtpTo.isNotBlank()) Text("Penerima SMTP: " + smtpTo, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    if (smtpFeedback.isNotBlank()) Text(smtpFeedback, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
                     if (sending) LinearProgressIndicator(Modifier.fillMaxWidth())
                 }
             },
@@ -321,26 +364,33 @@ private fun XRecoverApp() {
                     OutlinedTextField(smtpPassword, { smtpPassword = it.take(300) }, Modifier.fillMaxWidth(), singleLine = true, label = { Text("App password SMTP") }, visualTransformation = PasswordVisualTransformation())
                     OutlinedTextField(smtpTo, { smtpTo = it.take(200) }, Modifier.fillMaxWidth(), singleLine = true, label = { Text("Alamat penerima") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email))
                     Text("Hanya port 465/587 dengan TLS yang diterima. Jangan gunakan kata sandi utama atau OTP.", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (smtpFeedback.isNotBlank()) Text(smtpFeedback, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                    if (testingSmtp) LinearProgressIndicator(Modifier.fillMaxWidth())
                 }
             },
             confirmButton = {
-                TextButton(onClick = {
-                    val port = smtpPort.toIntOrNull()
-                    if (smtpHost.isBlank() || port == null || (port != 465 && port != 587) ||
-                        !Patterns.EMAIL_ADDRESS.matcher(smtpUser.trim()).matches() ||
-                        !Patterns.EMAIL_ADDRESS.matcher(smtpTo.trim()).matches()) {
-                        toast("Host, port, pengirim, atau penerima tidak valid.")
-                    } else {
-                        prefs.edit().putString("smtp_host", smtpHost.trim()).putString("smtp_port", port.toString())
-                            .putString("smtp_user", smtpUser.trim()).putString("smtp_to", smtpTo.trim()).apply()
-                        smtpOpen = false
-                        if (draft.isNotBlank()) previewOpen = true
-                        toast("Konfigurasi disimpan tanpa password.")
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    TextButton(onClick = { testSmtp() }, enabled = !testingSmtp && !sending) {
+                        Text(if (testingSmtp) "Menguji…" else "Tes koneksi")
                     }
-                }) { Text("Simpan") }
+                    TextButton(onClick = {
+                        val port = smtpPort.toIntOrNull()
+                        if (smtpHost.isBlank() || port == null || (port != 465 && port != 587) ||
+                            !Patterns.EMAIL_ADDRESS.matcher(smtpUser.trim()).matches() ||
+                            !Patterns.EMAIL_ADDRESS.matcher(smtpTo.trim()).matches()) {
+                            toast("Host, port, pengirim, atau penerima tidak valid.")
+                        } else {
+                            prefs.edit().putString("smtp_host", smtpHost.trim()).putString("smtp_port", port.toString())
+                                .putString("smtp_user", smtpUser.trim()).putString("smtp_to", smtpTo.trim()).apply()
+                            smtpOpen = false
+                            if (draft.isNotBlank()) previewOpen = true
+                            toast("Konfigurasi disimpan tanpa password.")
+                        }
+                    }) { Text("Simpan") }
+                }
             },
             dismissButton = {
-                TextButton(onClick = { smtpPassword = ""; smtpOpen = false; if (draft.isNotBlank()) previewOpen = true }) { Text("Batal") }
+                TextButton(onClick = { smtpPassword = ""; smtpOpen = false; if (draft.isNotBlank()) previewOpen = true }) { Text("Tutup") }
             }
         )
     }
@@ -386,23 +436,7 @@ private fun FaqItem(question: String, answer: String) {
 
 private fun sendEmailSmtp(host: String, port: Int, username: String, password: String, recipient: String, subject: String, body: String) {
     require(port == 465 || port == 587)
-    val props = Properties().apply {
-        put("mail.smtp.auth", "true")
-        put("mail.smtp.host", host)
-        put("mail.smtp.port", port.toString())
-        put("mail.smtp.connectiontimeout", "15000")
-        put("mail.smtp.timeout", "15000")
-        put("mail.smtp.writetimeout", "15000")
-        if (port == 465) {
-            put("mail.smtp.ssl.enable", "true")
-            put("mail.smtp.ssl.checkserveridentity", "true")
-        } else {
-            put("mail.smtp.starttls.enable", "true")
-            put("mail.smtp.starttls.required", "true")
-            put("mail.smtp.ssl.checkserveridentity", "true")
-        }
-    }
-    val session = Session.getInstance(props)
+    val session = Session.getInstance(smtpProperties(host, port))
     val message = MimeMessage(session).apply {
         setFrom(InternetAddress(username, true))
         setRecipients(Message.RecipientType.TO, InternetAddress.parse(recipient, true))
@@ -410,6 +444,55 @@ private fun sendEmailSmtp(host: String, port: Int, username: String, password: S
         setText(body, "UTF-8")
     }
     Transport.send(message, username, password)
+}
+
+private fun testSmtpConnection(host: String, port: Int, username: String, password: String) {
+    require(port == 465 || port == 587)
+    val properties = smtpProperties(host, port)
+    val session = Session.getInstance(properties)
+    val transport = session.getTransport("smtp")
+    try {
+        transport.connect(host, port, username, password)
+    } finally {
+        runCatching { transport.close() }
+    }
+}
+
+private fun smtpProperties(host: String, port: Int): Properties = Properties().apply {
+    put("mail.smtp.auth", "true")
+    put("mail.smtp.host", host)
+    put("mail.smtp.port", port.toString())
+    put("mail.smtp.connectiontimeout", "12000")
+    put("mail.smtp.timeout", "12000")
+    put("mail.smtp.writetimeout", "12000")
+    if (port == 465) {
+        put("mail.smtp.ssl.enable", "true")
+        put("mail.smtp.ssl.checkserveridentity", "true")
+    } else {
+        put("mail.smtp.starttls.enable", "true")
+        put("mail.smtp.starttls.required", "true")
+        put("mail.smtp.ssl.checkserveridentity", "true")
+    }
+}
+
+private fun smtpDiagnostic(error: Throwable): String {
+    val chain = generateSequence(error) { it.cause }.take(8).toList()
+    val allText = chain.mapNotNull { it.message }.joinToString(" ").lowercase(Locale.ROOT)
+    return when {
+        chain.any { it is javax.mail.AuthenticationFailedException } || "authentication failed" in allText || "535" in allText ->
+            "Login SMTP ditolak. Periksa username dan app password; beberapa penyedia mengharuskan app password."
+        chain.any { it is java.net.UnknownHostException } ->
+            "Host SMTP tidak ditemukan. Periksa penulisan host dan koneksi internet."
+        chain.any { it is javax.net.ssl.SSLException } || "certificate" in allText ->
+            "Handshake TLS gagal. Cocokkan port: 465 untuk SSL atau 587 untuk STARTTLS."
+        chain.any { it is java.net.SocketTimeoutException } ->
+            "Server SMTP tidak merespons tepat waktu. Periksa jaringan, host, dan port."
+        chain.any { it is java.net.ConnectException } ->
+            "Tidak dapat terhubung ke server SMTP. Periksa host/port atau apakah jaringan memblokir SMTP."
+        "starttls" in allText ->
+            "Server tidak berhasil memulai STARTTLS. Gunakan port/keamanan yang sesuai dengan penyedia email."
+        else -> "SMTP gagal: " + (chain.firstNotNullOfOrNull { it.message?.takeIf(String::isNotBlank) } ?: "Kesalahan koneksi tidak diketahui").take(180)
+    }
 }
 
 private fun loadRecords(prefs: android.content.SharedPreferences): List<Record> = try {
