@@ -111,9 +111,18 @@ private fun XRecover(prefs: android.content.SharedPreferences, dark: Boolean, th
         storeRecords(prefs, records)
     }
     fun buildDraft() {
-        val number = phone.trim().takeIf { it.isNotEmpty() }?.let { "Nomor akun: " + it + "\n\n" } ?: ""
-        val extra = detail.trim().takeIf { it.isNotEmpty() }?.let { "\nKeterangan tambahan: " + it + "\n" } ?: ""
-        draft = "Yth. Tim Dukungan WhatsApp,\n\nSaya ingin meminta bantuan terkait masalah akun WhatsApp.\nJenis masalah: " + issue + ".\n\n" + number + extra + "\nMohon periksa masalah ini dan informasikan langkah resmi yang perlu saya lakukan.\n\nTerima kasih."
+        val number = phone.trim().takeIf { it.isNotEmpty() }?.let { "Nomor WhatsApp terkait: " + it + "\\n" } ?: "[Tambahkan nomor WhatsApp dengan kode negara, misalnya +62…, jika formulir dukungan memintanya.]"
+        val extra = detail.trim().takeIf { it.isNotEmpty() }?.let { it } ?: "[Jelaskan pesan kesalahan persis seperti yang muncul, kapan masalah mulai terjadi, dan langkah yang sudah dicoba. Jangan sertakan kode OTP atau PIN.]"
+        val issueDescription = when (issue) {
+            "Banned sementara" -> "Akun saya menampilkan pemberitahuan pembatasan atau ban sementara. Saya ingin mengetahui penyebab yang mungkin dan langkah resmi untuk kembali menggunakan aplikasi. Jika ada instruksi atau hitung mundur pada layar, saya akan mengikuti instruksi tersebut."
+            "Banned permanen" -> "Akun saya menampilkan pemberitahuan bahwa akun tidak diizinkan menggunakan WhatsApp. Jika opsi peninjauan tersedia di aplikasi, saya ingin mengajukan pemeriksaan atas keputusan tersebut. Mohon tinjau kasus ini dan beri tahu apakah ada langkah resmi lain yang dapat saya lakukan."
+            "Akun dibatasi (Restricted)" -> "Akun saya tampak dibatasi dan beberapa fitur tidak dapat digunakan sebagaimana mestinya. Mohon jelaskan alasan pembatasan dan langkah resmi untuk memulihkan akses fitur jika memungkinkan."
+            "OTP / kode tidak masuk" -> "Saya belum menerima kode registrasi atau kode verifikasi yang diperlukan untuk masuk. Saya akan memastikan nomor dan kode negara benar serta mengikuti waktu tunggu yang ditampilkan. Mohon sarankan langkah pemecahan masalah resmi berikutnya."
+            "Coba lagi nanti" -> "Saya melihat pesan untuk mencoba lagi nanti saat meminta kode atau menggunakan akun. Saya akan mengikuti waktu tunggu yang ditampilkan dan menghindari permintaan berulang. Mohon informasikan langkah yang tepat jika masalah tetap terjadi setelah waktu tunggu berakhir."
+            "Akun diretas / diambil alih" -> "Saya khawatir akun saya diakses atau diambil alih pihak lain. Mohon panduan untuk mengamankan kembali akun melalui proses verifikasi resmi. Saya tidak akan membagikan kode registrasi atau PIN kepada siapa pun."
+            else -> "Saya mengalami masalah pada akun atau aplikasi WhatsApp dan memerlukan bantuan untuk menentukan langkah penanganan yang benar."
+        }
+        draft = "Yth. Tim Dukungan WhatsApp,\\n\\nSaya menghubungi tim dukungan untuk meminta bantuan terkait masalah akun saya.\\n\\nJENIS MASALAH\\n" + issue + "\\n\\nKRONOLOGI DAN KETERANGAN\\n" + extra + "\\n\\nINFORMASI AKUN\\n" + number + "\\n\\nRINCIAN MASALAH\\n" + issueDescription + "\\n\\nPERMOHONAN\\nMohon periksa informasi yang saya sampaikan dan arahkan saya ke langkah pemulihan atau peninjauan resmi yang sesuai. Jika ada informasi tambahan yang diperlukan, mohon beri tahu melalui saluran dukungan resmi. Saya bersedia mengikuti proses verifikasi yang tersedia di aplikasi resmi.\\n\\nTerima kasih atas waktu dan bantuannya.\\n\\nHormat saya,\\nPengguna WhatsApp"
         draftDialog = true
     }
 
