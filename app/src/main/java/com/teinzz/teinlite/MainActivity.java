@@ -8,6 +8,10 @@ import android.content.pm.ResolveInfo;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.text.InputType;
+import android.view.inputmethod.EditorInfo;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.view.Gravity;
@@ -16,6 +20,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.BaseAdapter;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.GridView;
 import android.widget.ImageView;
@@ -25,10 +30,12 @@ import android.widget.TextView;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Set;
 
 public final class MainActivity extends Activity {
-    private final ArrayList<App> apps = new ArrayList<>(), home = new ArrayList<>();
+    private final ArrayList<App> apps = new ArrayList<>(), home = new ArrayList<>(), shown = new ArrayList<>();
+    private EditText searchInput;
     private final HashSet<String> picked = new HashSet<>();
     private GridView homeGrid, drawerGrid;
     private AppsAdapter homeAdapter, drawerAdapter;
@@ -66,7 +73,7 @@ public final class MainActivity extends Activity {
                 apps.addAll(result);
                 for (App a : apps) if (picked.contains(a.key)) home.add(a);
                 if (homeAdapter != null) homeAdapter.notifyDataSetChanged();
-                if (drawerAdapter != null) drawerAdapter.notifyDataSetChanged();
+                if (drawerAdapter != null) filterApps(searchInput == null ? "" : searchInput.getText().toString());
             });
         }, "tl-apps").start();
     }
@@ -74,15 +81,20 @@ public final class MainActivity extends Activity {
     private GridView grid(boolean homeScreen) {
         GridView g = new GridView(this) {
             float down;
+            boolean drawerStartedAtTop;
             @Override public boolean onInterceptTouchEvent(MotionEvent e) {
-                if (e.getAction() == MotionEvent.ACTION_DOWN) down = e.getY();
+                if (e.getAction() == MotionEvent.ACTION_DOWN) {
+                    down = e.getY();
+                    drawerStartedAtTop = getFirstVisiblePosition() == 0 &&
+                            (getChildCount() == 0 || getChildAt(0).getTop() >= getPaddingTop() - dp(2));
+                }
                 if (e.getAction() == MotionEvent.ACTION_MOVE) {
                     float dy = e.getY() - down;
                     if (homeScreen && (home.isEmpty() || down > getHeight() * .72f) && dy < -dp(48)) {
                         showDrawer();
                         return true;
                     }
-                    if (!homeScreen && dy > dp(48)) {
+                    if (!homeScreen && drawerStartedAtTop && dy > dp(55)) {
                         showHome();
                         return true;
                     }
@@ -122,13 +134,6 @@ public final class MainActivity extends Activity {
             return true;
         });
         homeGrid.setLongClickable(true);
-        homeGrid.setOnTouchListener((v, e) -> {
-            if (home.isEmpty() && e.getAction() == MotionEvent.ACTION_UP) {
-                showDrawer();
-                return true;
-            }
-            return false;
-        });
         root.addView(homeGrid, new FrameLayout.LayoutParams(-1, -1));
         DrawerButton drawerButton = new DrawerButton();
         FrameLayout.LayoutParams buttonParams = new FrameLayout.LayoutParams(dp(48), dp(48), Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
@@ -139,12 +144,34 @@ public final class MainActivity extends Activity {
 
     private void showDrawer() {
         drawer = true;
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackgroundColor(Color.BLACK);
+        root.setPadding(dp(10), dp(8), dp(10), 0);
+
+        searchInput = new EditText(this);
+        searchInput.setSingleLine(true);
+        searchInput.setTextColor(Color.WHITE);
+        searchInput.setHintTextColor(0xFF909090);
+        searchInput.setHint("Cari aplikasi");
+        searchInput.setTextSize(14);
+        searchInput.setPadding(dp(14), 0, dp(12), 0);
+        searchInput.setBackgroundColor(0xFF191919);
+        searchInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+        searchInput.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
+        LinearLayout.LayoutParams searchParams = new LinearLayout.LayoutParams(-1, dp(46));
+        searchParams.bottomMargin = dp(5);
+        root.addView(searchInput, searchParams);
+
+        shown.clear();
+        shown.addAll(apps);
         drawerGrid = grid(false);
-        drawerAdapter = new AppsAdapter(apps);
+        drawerGrid.setPadding(dp(3), dp(5), dp(3), dp(12));
+        drawerAdapter = new AppsAdapter(shown);
         drawerGrid.setAdapter(drawerAdapter);
-        drawerGrid.setOnItemClickListener((p, v, pos, id) -> launch(apps.get(pos)));
+        drawerGrid.setOnItemClickListener((p, v, pos, id) -> launch(shown.get(pos)));
         drawerGrid.setOnItemLongClickListener((p, v, pos, id) -> {
-            App a = apps.get(pos);
+            App a = shown.get(pos);
             if (picked.add(a.key)) {
                 home.add(a);
                 Collections.sort(home, (x, y) -> x.label.compareToIgnoreCase(y.label));
@@ -153,9 +180,22 @@ public final class MainActivity extends Activity {
             }
             return true;
         });
-        setContentView(drawerGrid);
+        root.addView(drawerGrid, new LinearLayout.LayoutParams(-1, 0, 1));
+        searchInput.addTextChangedListener(new TextWatcher() {
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+            public void onTextChanged(CharSequence s, int start, int before, int count) { filterApps(s.toString()); }
+            public void afterTextChanged(Editable e) { }
+        });
+        setContentView(root);
     }
 
+    private void filterApps(String query) {
+        if (drawerAdapter == null) return;
+        String q = query.trim().toLowerCase(Locale.ROOT);
+        shown.clear();
+        for (App a : apps) if (q.isEmpty() || a.label.toLowerCase(Locale.ROOT).contains(q)) shown.add(a);
+        drawerAdapter.notifyDataSetChanged();
+    }
     private void save() {
         getSharedPreferences("home", 0).edit().putStringSet("apps", new HashSet<>(picked)).apply();
     }
@@ -184,15 +224,15 @@ public final class MainActivity extends Activity {
                 cell.setGravity(Gravity.CENTER);
                 ImageView icon = new ImageView(MainActivity.this);
                 icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
-                cell.addView(icon, new LinearLayout.LayoutParams(dp(40), dp(40)));
+                cell.addView(icon, new LinearLayout.LayoutParams(dp(54), dp(54)));
                 TextView label = new TextView(MainActivity.this);
                 label.setTextColor(Color.WHITE);
-                label.setTextSize(10);
+                label.setTextSize(11);
                 label.setGravity(Gravity.TOP | Gravity.CENTER_HORIZONTAL);
                 label.setMaxLines(2);
                 label.setEllipsize(android.text.TextUtils.TruncateAt.END);
-                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, dp(30));
-                lp.topMargin = dp(3);
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, dp(34));
+                lp.topMargin = dp(4);
                 cell.addView(label, lp);
                 t = new Tile(icon, label);
                 cell.setTag(t);

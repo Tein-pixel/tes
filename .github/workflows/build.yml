@@ -48,7 +48,7 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: TeinLite-1.0.3-APK
+          name: TeinLite-1.0.4-APK
           path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 14
@@ -58,4 +58,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           VERSION=$(sed -n "s/.*versionName '\\([^']*\\)'.*/\\1/p" app/build.gradle | head -n1)
-          gh release create "v$VERSION" app/build/outputs/apk/release/app-release.apk --title "TeinLite Blank $VERSION" --notes "Blank-first Android 10+ launcher. Home starts empty; tap the 9-dot button or swipe up to open the app drawer and long-press an app to add it. No network, ads, UI libraries, background services or animations."
+          gh release create "v$VERSION" app/build/outputs/apk/release/app-release.apk --title "TeinLite Blank $VERSION" --notes "Blank-first Android 10+ launcher. Home starts empty. Tap the 9-dot button or swipe up to open the app drawer. Search apps, swipe down from the top of the drawer to return Home, and long-press an app to add it. No network, ads, UI libraries, background services or animations."
