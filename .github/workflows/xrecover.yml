@@ -52,11 +52,17 @@ jobs:
       - name: Verify APK exists
         run: test -s app/build/outputs/apk/release/XRecover.apk
 
-      - name: Verify package and Android compatibility
+      - name: Verify package, Android compatibility, and local-only design
         run: |
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging app/build/outputs/apk/release/XRecover.apk | tee /tmp/xrecover-badging.txt
-          grep -q "package: name='com.teinzz.xrecover' versionName='1.2.0'" /tmp/xrecover-badging.txt
+          grep -q "package: name='com.teinzz.xrecover'" /tmp/xrecover-badging.txt
+          grep -q "versionName='1.2.0'" /tmp/xrecover-badging.txt
           grep -q "sdkVersion:'29'" /tmp/xrecover-badging.txt
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump permissions app/build/outputs/apk/release/XRecover.apk | tee /tmp/xrecover-permissions.txt
+          if grep -q "android.permission.INTERNET" /tmp/xrecover-permissions.txt; then
+            echo "XRecover must stay local-only and must not request INTERNET permission."
+            exit 1
+          fi
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
