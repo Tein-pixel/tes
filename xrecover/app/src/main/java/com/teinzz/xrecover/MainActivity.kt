@@ -97,6 +97,9 @@ private fun XRecover(prefs: android.content.SharedPreferences, dark: Boolean) {
     var draft by remember { mutableStateOf("") }
     var issue by remember { mutableStateOf(IssueTypes[0]) }
     var phone by remember { mutableStateOf("") }
+    var screenMessage by remember { mutableStateOf("") }
+    var startWhen by remember { mutableStateOf("") }
+    var triedSteps by remember { mutableStateOf("") }
     var detail by remember { mutableStateOf("") }
     val context = androidx.compose.ui.platform.LocalContext.current
 
@@ -119,8 +122,14 @@ private fun XRecover(prefs: android.content.SharedPreferences, dark: Boolean) {
         val number = phone.trim().takeIf { it.isNotEmpty() }
             ?.let { "Nomor WhatsApp: $it" }
             ?: "Nomor WhatsApp: [masukkan nomor dengan kode negara, jika diperlukan]"
-        val chronology = detail.trim().takeIf { it.isNotEmpty() }
-            ?: "[Tambahkan pesan persis di layar, waktu mulai terjadi, dan langkah yang sudah dicoba. Jangan masukkan OTP atau PIN.]"
+        fun valueOrPrompt(value: String, prompt: String): String =
+            value.trim().takeIf { it.isNotEmpty() } ?: "[$prompt]"
+        val chronology = listOf(
+            "Pesan persis di layar: " + valueOrPrompt(screenMessage, "belum diisi; salin teks yang tampil jika ada"),
+            "Mulai terjadi: " + valueOrPrompt(startWhen, "tanggal/jam belum diketahui"),
+            "Langkah yang sudah dicoba: " + valueOrPrompt(triedSteps, "belum dijelaskan"),
+            "Keterangan tambahan: " + valueOrPrompt(detail, "tidak ada keterangan tambahan")
+        ).joinToString("\n")
         val description = when (issue) {
             "Banned sementara" -> "WhatsApp menampilkan pemberitahuan pembatasan sementara pada akun saya. Saya ingin memahami alasan dan langkah yang diperbolehkan untuk menyelesaikan masalah ini. Saya akan mengikuti waktu tunggu atau instruksi yang ditampilkan di aplikasi resmi dan tidak akan mencoba menghindari pembatasan."
             "Banned permanen" -> "WhatsApp menampilkan pemberitahuan bahwa nomor saya tidak dapat menggunakan layanan. Saya meminta peninjauan atas keputusan tersebut apabila tombol Request review tersedia di aplikasi. Mohon periksa kasus ini berdasarkan informasi yang saya berikan; saya memahami bahwa keputusan akhir berada pada WhatsApp."
@@ -161,7 +170,11 @@ private fun XRecover(prefs: android.content.SharedPreferences, dark: Boolean) {
         Box(Modifier.fillMaxSize().padding(padding)) {
             when (page) {
                 "Pulihkan" -> RecoverScreen(
-                    dark, issue, { issue = it }, phone, { phone = it.take(25) }, detail, { detail = it.take(300) },
+                    dark, issue, { issue = it }, phone, { phone = it.take(25) },
+                    screenMessage, { screenMessage = it.take(220) },
+                    startWhen, { startWhen = it.take(100) },
+                    triedSteps, { triedSteps = it.take(220) },
+                    detail, { detail = it.take(300) },
                     { buildDraft() }, { openWhatsApp() },
                     { openUrl("https://faq.whatsapp.com/465883178708358/") },
                     { openUrl("https://faq.whatsapp.com/684051319521343/") }
@@ -240,14 +253,14 @@ private fun XRecover(prefs: android.content.SharedPreferences, dark: Boolean) {
                 Text("Privasi", fontWeight = FontWeight.SemiBold)
                 Text("XRecover tidak meminta kata sandi email, kata sandi WhatsApp, OTP, PIN, atau API key. Teks dibuat di perangkat. Riwayat hanya menyimpan jenis masalah, tanggal, dan status manual.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("Pengiriman dilakukan oleh kamu melalui WhatsApp atau formulir dukungan resmi. XRecover tidak menyatakan pesan terkirim sebelum saluran resmi mengonfirmasinya.", fontSize = 13.sp)
-                Text("Versi 1.1.0 • Android 10+", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Versi 1.3.0 • Android 10+", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }, confirmButton = { TextButton(onClick = { settings = false }) { Text("Selesai") } }
     )
 }
 
 @Composable
-private fun RecoverScreen(dark: Boolean, issue: String, setIssue: (String) -> Unit, phone: String, setPhone: (String) -> Unit, detail: String, setDetail: (String) -> Unit, generate: () -> Unit, openApp: () -> Unit, openBan: () -> Unit, openOtp: () -> Unit) {
+private fun RecoverScreen(dark: Boolean, issue: String, setIssue: (String) -> Unit, phone: String, setPhone: (String) -> Unit, screenMessage: String, setScreenMessage: (String) -> Unit, startWhen: String, setStartWhen: (String) -> Unit, triedSteps: String, setTriedSteps: (String) -> Unit, detail: String, setDetail: (String) -> Unit, generate: () -> Unit, openApp: () -> Unit, openBan: () -> Unit, openOtp: () -> Unit) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("AKUN WHATSAPP\nBERMASALAH?", fontWeight = FontWeight.ExtraBold, fontSize = 27.sp, lineHeight = 29.sp, letterSpacing = (-.5).sp)
         Text("Pilih masalah dan ikuti langkah resmi.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -261,14 +274,40 @@ private fun RecoverScreen(dark: Boolean, issue: String, setIssue: (String) -> Un
                 IssueMenu(issue, setIssue)
                 OutlinedTextField(value = phone, onValueChange = setPhone, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Nomor WhatsApp (opsional)") }, placeholder = { Text("+62…") }, shape = RoundedCornerShape(13.dp))
                 Text("Nomor tidak disimpan dalam riwayat.", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                OutlinedTextField(value = detail, onValueChange = setDetail, modifier = Modifier.fillMaxWidth().height(110.dp), label = { Text("Keterangan tambahan") }, placeholder = { Text(when (issue) {
-                    "Banned sementara", "Banned permanen" -> "Pesan ban yang tampil, tanggal mulai, dan aplikasi yang digunakan…"
-                    "Akun dibatasi (Restricted)" -> "Fitur yang dibatasi dan pesan yang tampil…"
-                    "OTP / kode tidak masuk" -> "Kode negara, metode SMS/panggilan, dan pesan kesalahan…"
-                    "Coba lagi nanti" -> "Kapan kode diminta dan berapa lama sudah menunggu…"
-                    "Akun diretas / diambil alih" -> "Kapan akun mulai tidak bisa diakses dan perubahan yang terlihat…"
-                    else -> "Kapan masalah mulai dan langkah yang sudah dicoba…"
-                }) }, maxLines = 4, shape = RoundedCornerShape(13.dp))
+                OutlinedTextField(
+                    value = screenMessage, onValueChange = setScreenMessage,
+                    modifier = Modifier.fillMaxWidth(), minLines = 2, maxLines = 3,
+                    label = { Text("Pesan persis di layar (opsional)") },
+                    placeholder = { Text("Salin teks pemberitahuan. Jangan masukkan OTP atau PIN.") },
+                    shape = RoundedCornerShape(13.dp)
+                )
+                OutlinedTextField(
+                    value = startWhen, onValueChange = setStartWhen,
+                    modifier = Modifier.fillMaxWidth(), singleLine = true,
+                    label = { Text("Mulai terjadi (opsional)") },
+                    placeholder = { Text("Contoh: 28 Okt, sekitar pukul 14.00") },
+                    shape = RoundedCornerShape(13.dp)
+                )
+                OutlinedTextField(
+                    value = triedSteps, onValueChange = setTriedSteps,
+                    modifier = Modifier.fillMaxWidth(), minLines = 2, maxLines = 3,
+                    label = { Text("Langkah yang sudah dicoba (opsional)") },
+                    placeholder = { Text(when (issue) {
+                        "Banned sementara" -> "Contoh: membaca pesan aplikasi dan memeriksa penggunaan WhatsApp resmi"
+                        "Banned permanen" -> "Contoh: memeriksa apakah tombol Request review tersedia"
+                        "OTP / kode tidak masuk", "Coba lagi nanti" -> "Contoh: memeriksa kode negara dan menunggu timer resmi"
+                        "Akun diretas / diambil alih" -> "Contoh: mencoba mendaftarkan nomor kembali di aplikasi resmi"
+                        else -> "Tuliskan hanya tindakan yang benar-benar sudah dilakukan"
+                    }) },
+                    shape = RoundedCornerShape(13.dp)
+                )
+                OutlinedTextField(
+                    value = detail, onValueChange = setDetail,
+                    modifier = Modifier.fillMaxWidth().height(88.dp),
+                    label = { Text("Keterangan tambahan (opsional)") },
+                    placeholder = { Text("Informasi lain yang relevan; jangan isi OTP/PIN.") },
+                    maxLines = 3, shape = RoundedCornerShape(13.dp)
+                )
                 Text(detail.length.toString() + "/300", modifier = Modifier.align(Alignment.End), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Button(onClick = generate, modifier = Modifier.fillMaxWidth().height(49.dp), shape = RoundedCornerShape(13.dp)) { Icon(Icons.Outlined.Article, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Susun teks bantuan", fontWeight = FontWeight.Bold) }
                 OutlinedButton(onClick = openApp, modifier = Modifier.fillMaxWidth().height(45.dp), shape = RoundedCornerShape(13.dp)) { Icon(Icons.Outlined.OpenInNew, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Buka WhatsApp") }
