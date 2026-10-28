@@ -49,6 +49,8 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.9.2")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.6")
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    implementation("com.google.errorprone:error_prone_annotations:2.36.0")
+    implementation("com.google.code.findbugs:jsr305:3.0.2")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
