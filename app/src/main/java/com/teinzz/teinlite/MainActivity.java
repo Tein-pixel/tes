@@ -153,7 +153,7 @@ public final class MainActivity extends Activity {
                     ComponentName c = new ComponentName(r.activityInfo.packageName, r.activityInfo.name);
                     if (getPackageName().equals(c.getPackageName())) continue;
                     result.add(item(pm, c));
-                } catch (RuntimeException ignored) { }
+                } catch (RuntimeException | PackageManager.NameNotFoundException ignored) { }
             }
             Collections.sort(result, (a, b) -> a.label.compareToIgnoreCase(b.label));
             runOnUiThread(() -> {
