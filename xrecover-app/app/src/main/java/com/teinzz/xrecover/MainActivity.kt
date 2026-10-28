@@ -117,16 +117,16 @@ private fun XRecoverApp() {
             saveHistory()
         }
         fun makeDraft() {
-            val lines = buildList {
-                add("Jenis masalah: " + issue)
-                if (phone.isNotBlank()) add("Nomor akun: " + phone.trim())
-                if (errorMessage.isNotBlank()) add("Pesan layar: " + errorMessage.trim())
-                if (startedAt.isNotBlank()) add("Mulai terjadi: " + startedAt.trim())
-                if (triedSteps.isNotBlank()) add("Langkah yang sudah dicoba: " + triedSteps.trim())
-                if (notes.isNotBlank()) add("Keterangan tambahan: " + notes.trim())
-            }.joinToString("\n")
-            draft = "Yth. Tim Dukungan WhatsApp,\n\nSaya meminta bantuan untuk masalah akun berikut.\n" +
-                lines + "\n\nMohon periksa masalah ini dan informasikan langkah resmi yang perlu dilakukan.\n\nTerima kasih."
+            val request = when (issue) {
+                "Banned sementara" -> "Akun saya sedang mengalami pemblokiran sementara. Mohon tinjau status akun ini dan jelaskan langkah resmi yang perlu saya lakukan."
+                "Banned permanen" -> "Saya ingin meminta peninjauan atas pemblokiran akun saya. Jika keputusan ini dibuat karena aktivitas tertentu, mohon informasikan panduan resmi yang dapat saya ikuti."
+                "Akun dibatasi" -> "Akun saya sedang dibatasi dan beberapa fungsi tidak dapat digunakan. Mohon periksa pembatasan ini dan beri tahu langkah resmi yang tersedia."
+                "OTP / kode tidak masuk" -> "Saya mengalami kendala menerima kode verifikasi saat mendaftarkan nomor. Mohon beri panduan resmi untuk menyelesaikan masalah verifikasi."
+                "Coba lagi nanti" -> "Saya melihat pesan untuk mencoba lagi nanti saat menggunakan atau mendaftarkan akun. Mohon bantu periksa kendala ini dan langkah yang disarankan."
+                "Akun diretas" -> "Saya khawatir akun saya diakses pihak lain. Mohon arahkan saya ke prosedur resmi untuk mengamankan dan memulihkan akses akun."
+                else -> "Saya mengalami masalah saat menggunakan WhatsApp. Mohon bantu meninjau masalah ini dan memberi tahu langkah resmi yang perlu saya lakukan."
+            }
+            draft = "Hello WhatsApp Support,\n\nI am requesting assistance with my WhatsApp account.\n\n$request\n\nPlease review my case and let me know the official next steps. I can provide additional details through the official support process if needed.\n\nThank you."
             previewOpen = true
         }
         fun sendSmtp() {
@@ -172,7 +172,7 @@ private fun XRecoverApp() {
                 TopAppBar(
                     title = { Column {
                         Text("XRecover", fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                        Text("Panduan akun WhatsApp • v1.5.0", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Panduan akun WhatsApp • v1.6.0", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     } },
                     actions = { IconButton(onClick = { settingsOpen = true }) { Icon(Icons.Outlined.Settings, "Pengaturan") } },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
@@ -205,11 +205,8 @@ private fun XRecoverApp() {
                                     Issues.forEach { value -> DropdownMenuItem(text = { Text(value) }, onClick = { issue = value; expanded = false }) }
                                 }
                             }
-                            OutlinedTextField(phone, { phone = it.take(25) }, Modifier.fillMaxWidth(), label = { Text("Nomor akun (opsional)") }, placeholder = { Text("+62…") }, singleLine = true)
-                            OutlinedTextField(errorMessage, { errorMessage = it.take(300) }, Modifier.fillMaxWidth(), label = { Text("Pesan yang muncul") }, placeholder = { Text("Salin teks error…") }, minLines = 2, maxLines = 3)
-                            OutlinedTextField(startedAt, { startedAt = it.take(120) }, Modifier.fillMaxWidth(), label = { Text("Kapan mulai terjadi") }, placeholder = { Text("Contoh: 2 hari lalu") }, singleLine = true)
-                            OutlinedTextField(triedSteps, { triedSteps = it.take(300) }, Modifier.fillMaxWidth(), label = { Text("Langkah yang sudah dicoba") }, minLines = 2, maxLines = 3)
-                            OutlinedTextField(notes, { notes = it.take(300) }, Modifier.fillMaxWidth(), label = { Text("Keterangan tambahan") }, minLines = 2, maxLines = 3)
+                            Text("Template otomatis berdasarkan jenis masalah. Tidak perlu mengisi nomor, waktu kejadian, atau keterangan secara manual.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("Teks bisa diperiksa dan diedit sebelum disalin atau dibagikan.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Button(onClick = { makeDraft() }, modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(14.dp)) {
                                 Icon(Icons.Outlined.Send, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Susun teks bantuan")
                             }
