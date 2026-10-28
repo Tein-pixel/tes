@@ -252,7 +252,14 @@ private fun RecoverScreen(dark: Boolean, issue: String, setIssue: (String) -> Un
                 IssueMenu(issue, setIssue)
                 OutlinedTextField(value = phone, onValueChange = setPhone, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Nomor WhatsApp (opsional)") }, placeholder = { Text("+62…") }, shape = RoundedCornerShape(13.dp))
                 Text("Nomor tidak disimpan dalam riwayat.", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                OutlinedTextField(value = detail, onValueChange = setDetail, modifier = Modifier.fillMaxWidth().height(110.dp), label = { Text("Keterangan tambahan") }, placeholder = { Text("Kapan masalah mulai terjadi…") }, maxLines = 4, shape = RoundedCornerShape(13.dp))
+                OutlinedTextField(value = detail, onValueChange = setDetail, modifier = Modifier.fillMaxWidth().height(110.dp), label = { Text("Keterangan tambahan") }, placeholder = { Text(when (issue) {
+                    "Banned sementara", "Banned permanen" -> "Pesan ban yang tampil, tanggal mulai, dan aplikasi yang digunakan…"
+                    "Akun dibatasi (Restricted)" -> "Fitur yang dibatasi dan pesan yang tampil…"
+                    "OTP / kode tidak masuk" -> "Kode negara, metode SMS/panggilan, dan pesan kesalahan…"
+                    "Coba lagi nanti" -> "Kapan kode diminta dan berapa lama sudah menunggu…"
+                    "Akun diretas / diambil alih" -> "Kapan akun mulai tidak bisa diakses dan perubahan yang terlihat…"
+                    else -> "Kapan masalah mulai dan langkah yang sudah dicoba…"
+                }) }, maxLines = 4, shape = RoundedCornerShape(13.dp))
                 Text(detail.length.toString() + "/300", modifier = Modifier.align(Alignment.End), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Button(onClick = generate, modifier = Modifier.fillMaxWidth().height(49.dp), shape = RoundedCornerShape(13.dp)) { Icon(Icons.Outlined.Article, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Susun teks bantuan", fontWeight = FontWeight.Bold) }
                 OutlinedButton(onClick = openApp, modifier = Modifier.fillMaxWidth().height(45.dp), shape = RoundedCornerShape(13.dp)) { Icon(Icons.Outlined.OpenInNew, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Buka WhatsApp") }
