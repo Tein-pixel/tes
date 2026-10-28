@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <queries>
         <intent>
@@ -7,11 +8,15 @@
     </queries>
     <application
         android:allowBackup="false"
+        android:icon="@drawable/ic_teinlite"
+        android:roundIcon="@drawable/ic_teinlite"
         android:label="TeinLite"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.NoActionBar">
         <activity
             android:name=".MainActivity"
+            android:icon="@drawable/ic_teinlite"
+            android:label="TeinLite"
             android:exported="true"
             android:launchMode="singleTask">
             <intent-filter>
