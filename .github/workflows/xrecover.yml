@@ -52,6 +52,12 @@ jobs:
       - name: Verify APK exists
         run: test -s app/build/outputs/apk/release/XRecover.apk
 
+      - name: Verify package and Android compatibility
+        run: |
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging app/build/outputs/apk/release/XRecover.apk | tee /tmp/xrecover-badging.txt
+          grep -q "package: name='com.teinzz.xrecover' versionName='1.2.0'" /tmp/xrecover-badging.txt
+          grep -q "sdkVersion:'29'" /tmp/xrecover-badging.txt
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
@@ -63,36 +69,15 @@ jobs:
       - name: Publish installable APK release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: xrecover-v1.0.1
+          tag_name: xrecover-v1.2.0
           target_commitish: xrecover-v1
-          name: XRecover v1.0.1 (Android 10+)
+          name: XRecover v1.2.0 (Android 10+)
           body: |
-            Optimized installable APK for XRecover v1.0.1.
-            Minimum Android: 10 (API 29).
+            Optimized installable APK for XRecover v1.2.0.\n            Indonesian recovery guide with issue-specific support text and local-only history.
+            Minimum Android: 10 (API 29).\n            No automatic submission to WhatsApp. Use the official in-app review flow when available.
             This app is an independent guide and is not affiliated with WhatsApp.
           files: xrecover/app/build/outputs/apk/release/XRecover.apk
           fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Record build result
-        if: always()
-        env:
-          JOB_RESULT: ${{ job.status }}
-          RUN_ID: ${{ github.run_id }}
-          COMMIT_SHA: ${{ github.sha }}
-        run: |
-          cd "$GITHUB_WORKSPACE"
-          {
-            echo "# XRecover build status"
-            echo
-            echo "- Result: $JOB_RESULT"
-            echo "- Run: $RUN_ID"
-            echo "- Source commit: $COMMIT_SHA"
-            echo "- Updated (UTC): $(date -u '+%Y-%m-%d %H:%M:%S')"
-          } > xrecover-build-status.md
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add xrecover-build-status.md
-          git commit -m "Record XRecover build result: $JOB_RESULT" || exit 0
-          git push origin HEAD:xrecover-v1
