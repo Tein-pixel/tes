@@ -3,6 +3,8 @@
     <application
         android:allowBackup="false"
         android:label="XRecover"
+        android:icon="@drawable/ic_xrecover"
+        android:roundIcon="@drawable/ic_xrecover"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
         <activity android:name=".MainActivity" android:exported="true">
