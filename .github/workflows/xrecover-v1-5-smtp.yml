@@ -1,0 +1,74 @@
+name: XRecover v1.5.0 SMTP
+
+on:
+  push:
+    branches:
+      - xrecover-v1.5-smtp
+    paths:
+      - "xrecover-app/**"
+      - ".github/workflows/xrecover-v1-5-smtp.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: "platform-tools platforms;android-35 build-tools;35.0.0"
+
+      - name: Set up Gradle 8.9
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Build XRecover release APK
+        run: gradle -p xrecover-app assembleRelease --no-daemon
+
+      - name: Verify APK and package metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="xrecover-app/app/build/outputs/apk/release/app-release.apk"
+          test -s "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='com.teinzz.xrecover' versionCode='6' versionName='1.5.0'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "sdkVersion:'29'"
+          sha256sum "$APK"
+          ls -lh "$APK"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: XRecover-v1.5.0-APK
+          path: xrecover-app/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: xrecover-v1.5.0
+          target_commitish: xrecover-v1.5-smtp
+          name: XRecover v1.5.0
+          body: |
+            XRecover v1.5.0 adds a visible, user-configured SMTP send flow.
+            - Host and recipient are entered by the user; no hidden destination.
+            - TLS required on port 465 (SSL) or 587 (STARTTLS).
+            - SMTP password is not persisted.
+            - Includes timeline report fields, local status/history, FAQ, and theme settings.
+            Test release signed with the standard CI debug key.
+          files: xrecover-app/app/build/outputs/apk/release/app-release.apk
+          fail_on_unmatched_files: true
