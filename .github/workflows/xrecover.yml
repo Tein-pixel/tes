@@ -56,7 +56,7 @@ jobs:
         run: |
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging app/build/outputs/apk/release/XRecover.apk | tee /tmp/xrecover-badging.txt
           grep -q "package: name='com.teinzz.xrecover'" /tmp/xrecover-badging.txt
-          grep -q "versionName='1.2.0'" /tmp/xrecover-badging.txt
+          grep -q "versionName='1.3.0'" /tmp/xrecover-badging.txt
           grep -q "sdkVersion:'29'" /tmp/xrecover-badging.txt
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump permissions app/build/outputs/apk/release/XRecover.apk | tee /tmp/xrecover-permissions.txt
           if grep -q "android.permission.INTERNET" /tmp/xrecover-permissions.txt; then
@@ -75,11 +75,11 @@ jobs:
       - name: Publish installable APK release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: xrecover-v1.2.0
+          tag_name: xrecover-v1.3.0
           target_commitish: xrecover-v1
-          name: XRecover v1.2.0 (Android 10+)
+          name: XRecover v1.3.0 (Android 10+)
           body: |
-            Optimized installable APK for XRecover v1.2.0.\n            Indonesian recovery guide with issue-specific support text and local-only history.
+            Optimized installable APK for XRecover v1.3.0.\n            Indonesian recovery guide with issue-specific support text and local-only history.
             Minimum Android: 10 (API 29).\n            No automatic submission to WhatsApp. Use the official in-app review flow when available.
             This app is an independent guide and is not affiliated with WhatsApp.
           files: xrecover/app/build/outputs/apk/release/XRecover.apk
