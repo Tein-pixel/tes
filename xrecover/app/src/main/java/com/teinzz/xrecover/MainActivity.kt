@@ -111,7 +111,7 @@ private fun XRecover(prefs: android.content.SharedPreferences, dark: Boolean, th
         storeRecords(prefs, records)
     }
     fun buildDraft() {
-        val number = phone.trim().takeIf { it.isNotEmpty() }?.let { "Nomor WhatsApp terkait: " + it + "\\n" } ?: "[Tambahkan nomor WhatsApp dengan kode negara, misalnya +62…, jika formulir dukungan memintanya.]"
+        val number = phone.trim().takeIf { it.isNotEmpty() }?.let { "Nomor WhatsApp terkait: " + it + "\n" } ?: "[Tambahkan nomor WhatsApp dengan kode negara, misalnya +62…, jika formulir dukungan memintanya.]"
         val extra = detail.trim().takeIf { it.isNotEmpty() }?.let { it } ?: "[Jelaskan pesan kesalahan persis seperti yang muncul, kapan masalah mulai terjadi, dan langkah yang sudah dicoba. Jangan sertakan kode OTP atau PIN.]"
         val issueDescription = when (issue) {
             "Banned sementara" -> "Akun saya menampilkan pemberitahuan pembatasan atau ban sementara. Saya ingin mengetahui penyebab yang mungkin dan langkah resmi untuk kembali menggunakan aplikasi. Jika ada instruksi atau hitung mundur pada layar, saya akan mengikuti instruksi tersebut."
@@ -122,7 +122,7 @@ private fun XRecover(prefs: android.content.SharedPreferences, dark: Boolean, th
             "Akun diretas / diambil alih" -> "Saya khawatir akun saya diakses atau diambil alih pihak lain. Mohon panduan untuk mengamankan kembali akun melalui proses verifikasi resmi. Saya tidak akan membagikan kode registrasi atau PIN kepada siapa pun."
             else -> "Saya mengalami masalah pada akun atau aplikasi WhatsApp dan memerlukan bantuan untuk menentukan langkah penanganan yang benar."
         }
-        draft = "Yth. Tim Dukungan WhatsApp,\\n\\nSaya menghubungi tim dukungan untuk meminta bantuan terkait masalah akun saya.\\n\\nJENIS MASALAH\\n" + issue + "\\n\\nKRONOLOGI DAN KETERANGAN\\n" + extra + "\\n\\nINFORMASI AKUN\\n" + number + "\\n\\nRINCIAN MASALAH\\n" + issueDescription + "\\n\\nPERMOHONAN\\nMohon periksa informasi yang saya sampaikan dan arahkan saya ke langkah pemulihan atau peninjauan resmi yang sesuai. Jika ada informasi tambahan yang diperlukan, mohon beri tahu melalui saluran dukungan resmi. Saya bersedia mengikuti proses verifikasi yang tersedia di aplikasi resmi.\\n\\nTerima kasih atas waktu dan bantuannya.\\n\\nHormat saya,\\nPengguna WhatsApp"
+        draft = "Yth. Tim Dukungan WhatsApp,\n\nSaya menghubungi tim dukungan untuk meminta bantuan terkait masalah akun saya.\n\nJENIS MASALAH\n" + issue + "\n\nKRONOLOGI DAN KETERANGAN\n" + extra + "\n\nINFORMASI AKUN\n" + number + "\n\nRINCIAN MASALAH\n" + issueDescription + "\n\nPERMOHONAN\nMohon periksa informasi yang saya sampaikan dan arahkan saya ke langkah pemulihan atau peninjauan resmi yang sesuai. Jika ada informasi tambahan yang diperlukan, mohon beri tahu melalui saluran dukungan resmi. Saya bersedia mengikuti proses verifikasi yang tersedia di aplikasi resmi.\n\nTerima kasih atas waktu dan bantuannya.\n\nHormat saya,\nPengguna WhatsApp"
         draftDialog = true
     }
 
