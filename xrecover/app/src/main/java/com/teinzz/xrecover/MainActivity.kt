@@ -263,7 +263,7 @@ private fun XRecover(prefs: android.content.SharedPreferences, dark: Boolean) {
                 Text("Privasi", fontWeight = FontWeight.SemiBold)
                 Text("XRecover tidak meminta kata sandi email, kata sandi WhatsApp, OTP, PIN, atau API key. Teks dibuat di perangkat. Riwayat hanya menyimpan jenis masalah, tanggal, dan status manual.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("Pengiriman dilakukan oleh kamu melalui WhatsApp atau formulir dukungan resmi. XRecover tidak menyatakan pesan terkirim sebelum saluran resmi mengonfirmasinya.", fontSize = 13.sp)
-                Text("Versi 1.3.0 • Android 10+", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Versi 1.4.0 • Android 10+", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }, confirmButton = { TextButton(onClick = { settings = false }) { Text("Selesai") } }
     )
