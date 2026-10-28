@@ -1,14 +1,20 @@
-# TeinLite Launcher
+# TeinLite Blank Launcher
 
-Ultra-minimal Android 10+ launcher focused on low APK size, fast app launch, low background activity and a fixed pure-black interface.
+Blank-first Android launcher for Android 10+.
 
-## Design rules
-- Native Java Android views only; no AndroidX, Compose, WebView or third-party UI libraries.
-- No themes, wallpaper picker, widgets, ads, network access, telemetry, sync, background service or decorative animations.
-- Launcher app discovery and icon loading run on a lower-priority worker thread.
-- Native GridView recycles app tiles to avoid constructing a full grid of views on every scroll.
+## How it works
+- The Home screen starts completely empty. No apps are inserted automatically.
+- Long-press the empty Home screen to choose which apps to add.
+- Swipe up from the bottom of Home to open the app drawer.
+- Long-press an app in the drawer to add it to Home.
+- Tap an app on Home to launch it; long-press it to remove it.
+- Home selections are saved locally.
 
-## Size target
-The GitHub Actions workflow measures the actual signed release APK and uploads it as an artifact. Desired maximum: 35 KiB (35,840 bytes). The value must be confirmed by a real build; this README does not claim that the APK already meets the target.
+## Lightweight design
+Native Java views only: no third-party UI libraries, no network permission, no ads, no analytics, no services, no polling and no decorative animations. Installed apps are scanned only when the drawer or picker is opened; selected Home icons load on a worker thread.
 
-The launcher avoids custom animations and recurring background work, but 60 FPS cannot be guaranteed on every device because frame rate depends on the phone, display and system load.
+## Strict size target
+GitHub Actions measures the final signed APK in bytes. The workflow only publishes a direct release when the APK is **20,000 bytes or smaller**; it always uploads the artifact so a larger result can be inspected. The size has to be measured after compiling.
+
+## Performance limits
+A mostly static native screen avoids continuous animation and background work, but 60 FPS and device temperature depend on the device, firmware, refresh rate and other running apps; they cannot be guaranteed by APK size alone.

@@ -1,4 +1,4 @@
-name: Build TeinLite APK
+name: Build TeinLite Blank Launcher
 on:
   push:
     branches: [ main ]
@@ -27,33 +27,33 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.7'
-      - name: Build optimized signed APK
+      - name: Build optimized release APK
         run: gradle --no-daemon --stacktrace assembleRelease
-      - name: Measure APK size
+      - name: Measure APK size and checksum
         id: size
         shell: bash
         run: |
           APK="app/build/outputs/apk/release/app-release.apk"
           test -f "$APK"
           BYTES=$(stat -c '%s' "$APK")
-          echo "APK size: ${BYTES} bytes ($(( (BYTES + 1023) / 1024 )) KiB)"
+          echo "APK size: ${BYTES} bytes"
           echo "bytes=$BYTES" >> "$GITHUB_OUTPUT"
           sha256sum "$APK"
-          if [ "$BYTES" -gt 35840 ]; then
-            echo "::warning::APK is larger than the 35 KiB target. Artifact will still be uploaded for diagnosis."
+          if [ "$BYTES" -gt 20000 ]; then
+            echo "::warning::APK exceeds the 20,000-byte target; artifact is retained for inspection."
           fi
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: TeinLite-release-apk
+          name: TeinLite-1.0.1-APK
           path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 14
-      - name: Publish direct APK release when within 35 KiB
-        if: ${{ steps.size.outputs.bytes != '' && fromJSON(steps.size.outputs.bytes) <= 35840 && github.ref == 'refs/heads/main' }}
+      - name: Publish direct APK release when under 20 KB
+        if: ${{ steps.size.outputs.bytes != '' && fromJSON(steps.size.outputs.bytes) <= 20000 && github.ref == 'refs/heads/main' }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create v1.0.0 app/build/outputs/apk/release/app-release.apk \
-            --title "TeinLite 1.0.0" \
-            --notes "Minimal Android 10+ launcher. Offline, pure black, no UI libraries, no animations or background services."
+          gh release create v1.0.1 app/build/outputs/apk/release/app-release.apk \
+            --title "TeinLite Blank 1.0.1" \
+            --notes "Blank-first Android 10+ launcher. Choose which apps appear on Home. No network, ads, libraries, background services or animations."
