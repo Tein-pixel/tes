@@ -63,7 +63,7 @@ jobs:
         with:
           tag_name: xrecover-v1.6.0
           target_commitish: xrecover-v1.5-smtp
-          name: XRecover v1.5.1 (optimized)
+          name: XRecover v1.6.0 (automatic templates)
           body: |
             XRecover v1.6.0 automatic issue-specific appeal templates with code/resource shrinking.\n            The main screen no longer requires manual report fields.
             - Manual SMTP with visible user-configured host, sender, recipient.
