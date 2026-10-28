@@ -80,23 +80,26 @@ public final class MainActivity extends Activity {
 
     private GridView grid(boolean homeScreen) {
         GridView g = new GridView(this) {
-            float down;
+            float downX, downY;
             boolean drawerStartedAtTop;
             @Override public boolean onInterceptTouchEvent(MotionEvent e) {
                 if (e.getAction() == MotionEvent.ACTION_DOWN) {
-                    down = e.getY();
+                    downX = e.getX();
+                    downY = e.getY();
                     drawerStartedAtTop = getFirstVisiblePosition() == 0 &&
                             (getChildCount() == 0 || getChildAt(0).getTop() >= getPaddingTop() - dp(2));
                 }
                 if (e.getAction() == MotionEvent.ACTION_MOVE) {
-                    float dy = e.getY() - down;
-                    if (homeScreen && (home.isEmpty() || down > getHeight() * .72f) && dy < -dp(48)) {
-                        showDrawer();
-                        return true;
-                    }
-                    if (!homeScreen && drawerStartedAtTop && dy > dp(55)) {
-                        showHome();
-                        return true;
+                    float dx = e.getX() - downX, dy = e.getY() - downY;
+                    if (Math.abs(dy) > Math.abs(dx) * 1.2f) {
+                        if (homeScreen && dy < -dp(48)) {
+                            showDrawer();
+                            return true;
+                        }
+                        if (!homeScreen && drawerStartedAtTop && dy > dp(55)) {
+                            showHome();
+                            return true;
+                        }
                     }
                 }
                 return super.onInterceptTouchEvent(e);
@@ -135,18 +138,16 @@ public final class MainActivity extends Activity {
         });
         homeGrid.setLongClickable(true);
         root.addView(homeGrid, new FrameLayout.LayoutParams(-1, -1));
-        DrawerButton drawerButton = new DrawerButton();
-        FrameLayout.LayoutParams buttonParams = new FrameLayout.LayoutParams(dp(48), dp(48), Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
-        buttonParams.bottomMargin = dp(10);
-        root.addView(drawerButton, buttonParams);
+        DrawerIndicator indicator = new DrawerIndicator();
+        FrameLayout.LayoutParams indicatorParams = new FrameLayout.LayoutParams(dp(30), dp(14), Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+        indicatorParams.bottomMargin = dp(5);
+        root.addView(indicator, indicatorParams);
         setContentView(root);
     }
 
     private void showDrawer() {
         drawer = true;
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(Color.BLACK);
+        DrawerRoot root = new DrawerRoot();
         root.setPadding(dp(10), dp(8), dp(10), 0);
 
         searchInput = new EditText(this);
@@ -245,23 +246,47 @@ public final class MainActivity extends Activity {
     }
 
 
-    private final class DrawerButton extends View {
-        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        DrawerButton() {
+    private final class DrawerRoot extends LinearLayout {
+        private float startX, startY;
+        private boolean startAtTop;
+        DrawerRoot() {
             super(MainActivity.this);
-            setContentDescription("Buka laci aplikasi");
-            setClickable(true);
-            setOnClickListener(v -> showDrawer());
+            setOrientation(VERTICAL);
+            setBackgroundColor(Color.BLACK);
+        }
+        @Override public boolean onInterceptTouchEvent(MotionEvent e) {
+            if (e.getAction() == MotionEvent.ACTION_DOWN) {
+                startX = e.getX();
+                startY = e.getY();
+                startAtTop = drawerGrid == null || (drawerGrid.getFirstVisiblePosition() == 0 &&
+                        (drawerGrid.getChildCount() == 0 ||
+                        drawerGrid.getChildAt(0).getTop() >= drawerGrid.getPaddingTop() - dp(2)));
+            } else if (e.getAction() == MotionEvent.ACTION_MOVE && startAtTop) {
+                float dx = e.getX() - startX, dy = e.getY() - startY;
+                if (dy > dp(55) && Math.abs(dy) > Math.abs(dx) * 1.2f) {
+                    showHome();
+                    return true;
+                }
+            }
+            return super.onInterceptTouchEvent(e);
+        }
+    }
+
+    private final class DrawerIndicator extends View {
+        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        DrawerIndicator() {
+            super(MainActivity.this);
+            setContentDescription("Geser ke atas untuk membuka laci aplikasi");
+            setClickable(false);
+            setFocusable(false);
+            setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         }
         @Override protected void onDraw(Canvas canvas) {
             float cx = getWidth() / 2f, cy = getHeight() / 2f;
-            paint.setColor(0xFF181818);
-            canvas.drawCircle(cx, cy, dp(20), paint);
-            paint.setColor(0xFFD0D0D0);
-            float gap = dp(5), radius = dp(1.5f);
-            for (int row = -1; row <= 1; row++)
-                for (int col = -1; col <= 1; col++)
-                    canvas.drawCircle(cx + col * gap, cy + row * gap, radius, paint);
+            paint.setColor(0xFF777777);
+            float gap = dp(5), radius = dp(1.1f);
+            for (int col = -1; col <= 1; col++)
+                canvas.drawCircle(cx + col * gap, cy, radius, paint);
         }
     }
 
