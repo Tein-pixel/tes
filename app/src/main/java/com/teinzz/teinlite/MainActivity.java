@@ -1,7 +1,6 @@
 package com.teinzz.teinlite;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -9,70 +8,78 @@ import android.content.pm.ResolveInfo;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
-import android.text.Editable;
-import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
-import android.view.WindowManager;
-import android.view.inputmethod.EditorInfo;
 import android.widget.BaseAdapter;
-import android.widget.EditText;
 import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
-import android.text.InputType;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
 import java.util.Set;
 
-/** Blank-first native launcher. No services, network, libraries or animations. */
 public final class MainActivity extends Activity {
-    private static final int BLACK = Color.BLACK, WHITE = Color.WHITE, MUTED = 0xFF929292;
-    private final ArrayList<AppItem> all = new ArrayList<>(), home = new ArrayList<>(), shown = new ArrayList<>();
-    private final Set<String> picked = new HashSet<>();
-    private final ArrayList<Runnable> waiting = new ArrayList<>();
+    private final ArrayList<App> apps = new ArrayList<>(), home = new ArrayList<>();
+    private final HashSet<String> picked = new HashSet<>();
     private GridView homeGrid, drawerGrid;
-    private AppAdapter homeAdapter, drawerAdapter;
-    private EditText search;
-    private boolean loaded, loading;
-    private int screen;
-    private float downY;
+    private AppsAdapter homeAdapter, drawerAdapter;
+    private boolean drawer;
 
     private int dp(float n) { return (int)(n * getResources().getDisplayMetrics().density + .5f); }
 
     @Override public void onCreate(Bundle b) {
         super.onCreate(b);
         Window w = getWindow();
-        w.setStatusBarColor(BLACK);
-        w.setNavigationBarColor(BLACK);
-        w.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
-        w.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING);
-        Set<String> saved = getSharedPreferences("home", 0).getStringSet("apps", Collections.<String>emptySet());
-        picked.addAll(saved);
+        w.setStatusBarColor(Color.BLACK);
+        w.setNavigationBarColor(Color.BLACK);
+        Set<String> old = getSharedPreferences("home", 0).getStringSet("apps", null);
+        if (old != null) picked.addAll(old);
         showHome();
-        if (!picked.isEmpty()) loadPicked();
+        loadApps();
+    }
+
+    private void loadApps() {
+        new Thread(() -> {
+            ArrayList<App> result = new ArrayList<>();
+            PackageManager pm = getPackageManager();
+            Intent query = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER);
+            for (ResolveInfo r : pm.queryIntentActivities(query, 0)) {
+                if (getPackageName().equals(r.activityInfo.packageName)) continue;
+                try {
+                    ComponentName c = new ComponentName(r.activityInfo.packageName, r.activityInfo.name);
+                    CharSequence label = r.loadLabel(pm);
+                    result.add(new App(c.flattenToString(), label == null ? c.getPackageName() : label.toString(),
+                            new Intent(query).setComponent(c), r.loadIcon(pm)));
+                } catch (RuntimeException ignored) { }
+            }
+            Collections.sort(result, (a, b) -> a.label.compareToIgnoreCase(b.label));
+            runOnUiThread(() -> {
+                apps.addAll(result);
+                for (App a : apps) if (picked.contains(a.key)) home.add(a);
+                if (homeAdapter != null) homeAdapter.notifyDataSetChanged();
+                if (drawerAdapter != null) drawerAdapter.notifyDataSetChanged();
+            });
+        }, "tl-apps").start();
     }
 
     private GridView grid(boolean homeScreen) {
         GridView g = new GridView(this) {
+            float down;
             @Override public boolean onInterceptTouchEvent(MotionEvent e) {
-                if (e.getAction() == MotionEvent.ACTION_DOWN) downY = e.getY();
+                if (e.getAction() == MotionEvent.ACTION_DOWN) down = e.getY();
                 if (e.getAction() == MotionEvent.ACTION_MOVE) {
-                    float dy = e.getY() - downY;
-                    if (homeScreen && (home.isEmpty() || downY > getHeight() * .72f) && dy < -dp(48)) {
+                    float dy = e.getY() - down;
+                    if (homeScreen && (home.isEmpty() || down > getHeight() * .72f) && dy < -dp(48)) {
                         showDrawer();
                         return true;
                     }
-                    if (!homeScreen && dy > dp(70)) {
+                    if (!homeScreen && dy > dp(48)) {
                         showHome();
                         return true;
                     }
@@ -81,196 +88,88 @@ public final class MainActivity extends Activity {
             }
         };
         g.setNumColumns(4);
-        g.setColumnWidth(dp(72));
+        g.setColumnWidth(dp(68));
         g.setStretchMode(GridView.STRETCH_COLUMN_WIDTH);
         g.setVerticalSpacing(dp(8));
-        g.setHorizontalSpacing(0);
-        g.setPadding(dp(8), dp(14), dp(8), dp(12));
+        g.setPadding(dp(5), dp(10), dp(5), dp(10));
         g.setClipToPadding(false);
-        g.setBackgroundColor(BLACK);
-        g.setCacheColorHint(BLACK);
+        g.setBackgroundColor(Color.BLACK);
+        g.setCacheColorHint(Color.BLACK);
         return g;
     }
 
     private void showHome() {
-        screen = 0;
+        drawer = false;
         homeGrid = grid(true);
-        homeAdapter = new AppAdapter(home);
+        homeAdapter = new AppsAdapter(home);
         homeGrid.setAdapter(homeAdapter);
         homeGrid.setOnItemClickListener((p, v, pos, id) -> launch(home.get(pos)));
         homeGrid.setOnItemLongClickListener((p, v, pos, id) -> {
-            remove(home.get(pos));
+            App a = home.remove(pos);
+            picked.remove(a.key);
+            save();
+            homeAdapter.notifyDataSetChanged();
+            return true;
+        });
+        homeGrid.setOnLongClickListener(v -> {
+            if (!home.isEmpty()) return false;
+            showDrawer();
             return true;
         });
         homeGrid.setLongClickable(true);
-        homeGrid.setOnLongClickListener(v -> { addPicker(); return true; });
         setContentView(homeGrid);
     }
 
     private void showDrawer() {
-        screen = 1;
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(BLACK);
-        root.setPadding(dp(12), dp(8), dp(12), 0);
-        search = new EditText(this);
-        search.setSingleLine(true);
-        search.setTextColor(WHITE);
-        search.setHintTextColor(MUTED);
-        search.setHint("Cari aplikasi");
-        search.setTextSize(14);
-        search.setPadding(dp(12), 0, dp(10), 0);
-        search.setBackgroundColor(0xFF151515);
-        search.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
-        search.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
-        root.addView(search, new LinearLayout.LayoutParams(-1, dp(42)));
+        drawer = true;
         drawerGrid = grid(false);
-        drawerAdapter = new AppAdapter(shown);
+        drawerAdapter = new AppsAdapter(apps);
         drawerGrid.setAdapter(drawerAdapter);
-        drawerGrid.setOnItemClickListener((p, v, pos, id) -> launch(shown.get(pos)));
-        drawerGrid.setOnItemLongClickListener((p, v, pos, id) -> { add(shown.get(pos)); return true; });
-        root.addView(drawerGrid, new LinearLayout.LayoutParams(-1, 0, 1));
-        setContentView(root);
-        search.addTextChangedListener(new TextWatcher() {
-            public void beforeTextChanged(CharSequence s, int st, int c, int a) { }
-            public void onTextChanged(CharSequence s, int st, int before, int count) { filter(s.toString()); }
-            public void afterTextChanged(Editable e) { }
+        drawerGrid.setOnItemClickListener((p, v, pos, id) -> launch(apps.get(pos)));
+        drawerGrid.setOnItemLongClickListener((p, v, pos, id) -> {
+            App a = apps.get(pos);
+            if (picked.add(a.key)) {
+                home.add(a);
+                Collections.sort(home, (x, y) -> x.label.compareToIgnoreCase(y.label));
+                save();
+                if (homeAdapter != null) homeAdapter.notifyDataSetChanged();
+            }
+            return true;
         });
-        ensureLoaded(() -> filter(""));
+        setContentView(drawerGrid);
     }
 
-    private void ensureLoaded(Runnable done) {
-        if (loaded) { done.run(); return; }
-        waiting.add(done);
-        if (loading) return;
-        loading = true;
-        new Thread(() -> {
-            ArrayList<AppItem> result = new ArrayList<>();
-            PackageManager pm = getPackageManager();
-            Intent q = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER);
-            for (ResolveInfo r : pm.queryIntentActivities(q, 0)) {
-                try {
-                    ComponentName c = new ComponentName(r.activityInfo.packageName, r.activityInfo.name);
-                    if (getPackageName().equals(c.getPackageName())) continue;
-                    result.add(item(pm, c));
-                } catch (RuntimeException | PackageManager.NameNotFoundException ignored) { }
-            }
-            Collections.sort(result, (a, b) -> a.label.compareToIgnoreCase(b.label));
-            runOnUiThread(() -> {
-                all.clear(); all.addAll(result);
-                loaded = true; loading = false;
-                ArrayList<Runnable> next = new ArrayList<>(waiting); waiting.clear();
-                for (Runnable task : next) task.run();
-            });
-        }, "TeinLite-Apps").start();
-    }
-
-    private AppItem item(PackageManager pm, ComponentName c) throws PackageManager.NameNotFoundException {
-        android.content.pm.ActivityInfo info = pm.getActivityInfo(c, 0);
-        Intent i = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-                .setComponent(c).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        CharSequence label = info.loadLabel(pm);
-        return new AppItem(c.flattenToString(), label == null ? c.getPackageName() : label.toString(), i, info.loadIcon(pm));
-    }
-
-    private void loadPicked() {
-        ArrayList<String> keys = new ArrayList<>(picked);
-        new Thread(() -> {
-            ArrayList<AppItem> result = new ArrayList<>();
-            PackageManager pm = getPackageManager();
-            for (String key : keys) {
-                ComponentName c = ComponentName.unflattenFromString(key);
-                if (c == null) continue;
-                try { result.add(item(pm, c)); } catch (RuntimeException | PackageManager.NameNotFoundException ignored) { }
-            }
-            Collections.sort(result, (a, b) -> a.label.compareToIgnoreCase(b.label));
-            runOnUiThread(() -> { home.clear(); home.addAll(result); if (homeAdapter != null) homeAdapter.notifyDataSetChanged(); });
-        }, "TeinLite-Home").start();
-    }
-
-    private void filter(String text) {
-        if (drawerAdapter == null) return;
-        String q = text.trim().toLowerCase(Locale.ROOT);
-        shown.clear();
-        for (AppItem a : all) if (q.isEmpty() || a.label.toLowerCase(Locale.ROOT).contains(q)) shown.add(a);
-        drawerAdapter.notifyDataSetChanged();
-    }
-
-    private void addPicker() {
-        ensureLoaded(() -> {
-            String[] labels = new String[all.size()];
-            boolean[] checked = new boolean[all.size()];
-            for (int i = 0; i < all.size(); i++) {
-                labels[i] = all.get(i).label;
-                checked[i] = picked.contains(all.get(i).key);
-            }
-            new AlertDialog.Builder(this).setTitle("Tambah aplikasi")
-                    .setMultiChoiceItems(labels, checked, (d, which, yes) -> checked[which] = yes)
-                    .setNegativeButton("Batal", null)
-                    .setPositiveButton("Simpan", (d, w) -> {
-                        picked.clear();
-                        for (int i = 0; i < all.size(); i++) if (checked[i]) picked.add(all.get(i).key);
-                        persist();
-                        home.clear();
-                        for (AppItem a : all) if (picked.contains(a.key)) home.add(a);
-                        Collections.sort(home, (a, b) -> a.label.compareToIgnoreCase(b.label));
-                        if (homeAdapter != null) homeAdapter.notifyDataSetChanged();
-                    }).show();
-        });
-    }
-
-    private void add(AppItem a) {
-        if (picked.add(a.key)) {
-            home.add(a);
-            Collections.sort(home, (x, y) -> x.label.compareToIgnoreCase(y.label));
-            persist();
-            if (homeAdapter != null) homeAdapter.notifyDataSetChanged();
-            Toast.makeText(this, "Aplikasi ditambahkan", Toast.LENGTH_SHORT).show();
-        } else Toast.makeText(this, "Sudah ada di layar utama", Toast.LENGTH_SHORT).show();
-    }
-
-    private void remove(AppItem a) {
-        new AlertDialog.Builder(this).setMessage("Hapus " + a.label + " dari layar utama?")
-                .setNegativeButton("Cancel", null).setPositiveButton("Hapus", (d, w) -> {
-                    picked.remove(a.key);
-                    home.remove(a);
-                    persist();
-                    if (homeAdapter != null) homeAdapter.notifyDataSetChanged();
-                }).show();
-    }
-
-    private void persist() {
+    private void save() {
         getSharedPreferences("home", 0).edit().putStringSet("apps", new HashSet<>(picked)).apply();
     }
 
-    private void launch(AppItem a) {
-        if (screen == 1) showHome();
+    private void launch(App a) {
+        showHome();
         try { startActivity(a.intent); } catch (RuntimeException ignored) { }
     }
 
     @Override public void onBackPressed() {
-        if (screen == 1) showHome(); else super.onBackPressed();
+        if (drawer) showHome(); else super.onBackPressed();
     }
 
-    private final class AppAdapter extends BaseAdapter {
-        private final ArrayList<AppItem> data;
-        AppAdapter(ArrayList<AppItem> d) { data = d; }
+    private final class AppsAdapter extends BaseAdapter {
+        private final ArrayList<App> data;
+        AppsAdapter(ArrayList<App> data) { this.data = data; }
         public int getCount() { return data.size(); }
         public Object getItem(int p) { return data.get(p); }
         public long getItemId(int p) { return p; }
         public View getView(int p, View old, ViewGroup parent) {
             Tile t;
-            if (old != null && old.getTag() instanceof Tile) t = (Tile)old.getTag();
+            if (old != null && old.getTag() instanceof Tile) t = (Tile) old.getTag();
             else {
                 LinearLayout cell = new LinearLayout(MainActivity.this);
                 cell.setOrientation(LinearLayout.VERTICAL);
                 cell.setGravity(Gravity.CENTER);
-                cell.setPadding(dp(2), dp(3), dp(2), dp(3));
                 ImageView icon = new ImageView(MainActivity.this);
                 icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
                 cell.addView(icon, new LinearLayout.LayoutParams(dp(40), dp(40)));
                 TextView label = new TextView(MainActivity.this);
-                label.setTextColor(WHITE);
+                label.setTextColor(Color.WHITE);
                 label.setTextSize(10);
                 label.setGravity(Gravity.TOP | Gravity.CENTER_HORIZONTAL);
                 label.setMaxLines(2);
@@ -279,21 +178,25 @@ public final class MainActivity extends Activity {
                 lp.topMargin = dp(3);
                 cell.addView(label, lp);
                 t = new Tile(icon, label);
-                cell.setTag(t); old = cell;
+                cell.setTag(t);
             }
-            AppItem a = data.get(p);
+            App a = data.get(p);
             t.icon.setImageDrawable(a.icon);
             t.label.setText(a.label);
-            return old;
+            return (View) ((View) (old == null ? t.icon.getParent() : old));
         }
     }
 
     private static final class Tile {
-        final ImageView icon; final TextView label;
+        final ImageView icon;
+        final TextView label;
         Tile(ImageView i, TextView l) { icon = i; label = l; }
     }
-    private static final class AppItem {
-        final String key, label; final Intent intent; final Drawable icon;
-        AppItem(String k, String l, Intent i, Drawable d) { key = k; label = l; intent = i; icon = d; }
+
+    private static final class App {
+        final String key, label;
+        final Intent intent;
+        final Drawable icon;
+        App(String k, String l, Intent i, Drawable d) { key = k; label = l; intent = i; icon = d; }
     }
 }
