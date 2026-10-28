@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -46,10 +46,25 @@ jobs:
       - name: Verify APK exists
         run: test -s app/build/outputs/apk/debug/app-debug.apk
 
-      - name: Upload APK
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: XRecover-debug-APK
           path: xrecover/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
+
+      - name: Publish installable APK release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: xrecover-v1-build
+          target_commitish: xrecover-v1
+          name: XRecover v1.0.0 (Android 10+)
+          body: |
+            Installable debug APK for XRecover.
+            Minimum Android: 10 (API 29).
+            This app is an independent guide and is not affiliated with WhatsApp.
+          files: xrecover/app/build/outputs/apk/debug/app-debug.apk
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
