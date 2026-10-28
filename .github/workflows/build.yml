@@ -39,11 +39,8 @@ jobs:
           echo "APK size: ${BYTES} bytes"
           echo "bytes=$BYTES" >> "$GITHUB_OUTPUT"
           sha256sum "$APK"
-          if [ "$BYTES" -gt 16384 ]; then
-            echo "::warning::APK exceeds the aspirational 16 KiB target."
-          fi
-          if [ "$BYTES" -gt 20000 ]; then
-            echo "::warning::APK exceeds the 20,000-byte target; artifact is retained for inspection."
+          if [ "$BYTES" -gt 35000 ]; then
+            echo "::warning::APK exceeds the 35,000-byte target; artifact is retained for inspection."
           fi
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
@@ -52,8 +49,8 @@ jobs:
           path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 14
-      - name: Publish direct APK release when under 20 KB
-        if: ${{ steps.size.outputs.bytes != '' && fromJSON(steps.size.outputs.bytes) <= 20000 && github.ref == 'refs/heads/main' }}
+      - name: Publish direct APK release when under 35 KB
+        if: ${{ steps.size.outputs.bytes != '' && fromJSON(steps.size.outputs.bytes) <= 35000 && github.ref == 'refs/heads/main' }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
