@@ -385,6 +385,13 @@ private fun InfoChoice(selected: String, choose: (String) -> Unit, label: String
     }
 }
 
+private data class StepAdvice(
+    val title: String,
+    val body: String,
+    val action: String,
+    val onClick: () -> Unit
+)
+
 @Composable
 private fun NextStepsCard(
     issue: String,
@@ -393,48 +400,41 @@ private fun NextStepsCard(
     openOtpGuide: () -> Unit,
     openContact: () -> Unit
 ) {
-    val (title, body, action, click) = when (issue) {
-        "Banned sementara" -> listOf(
+    val advice = when (issue) {
+        "Banned sementara" -> StepAdvice(
             "Langkah aman berikutnya",
             "Gunakan aplikasi WhatsApp resmi. Jika memakai aplikasi tidak resmi, beralihlah ke aplikasi resmi; jika ada aktivitas scraping/otomatis, hentikan. Ikuti timer yang tampil dan jangan mencoba mengakali pembatasan.",
-            "Buka WhatsApp",
-            openWhatsApp
+            "Buka WhatsApp", openWhatsApp
         )
-        "Banned permanen" -> listOf(
+        "Banned permanen" -> StepAdvice(
             "Ajukan peninjauan resmi",
             "Jika tombol Request review tersedia di aplikasi, gunakan jalur itu untuk nomor tersebut. Teks bantuan tidak menjamin ban dicabut dan menghubungi pihak lain tidak mempercepat keputusan.",
-            "Buka WhatsApp",
-            openWhatsApp
+            "Buka WhatsApp", openWhatsApp
         )
-        "Akun dibatasi (Restricted)" -> listOf(
+        "Akun dibatasi (Restricted)" -> StepAdvice(
             "Periksa pembatasan akun",
             "Baca pesan pembatasan di aplikasi resmi dan gunakan pilihan bantuan yang ditampilkan. Jangan gunakan alat untuk menghindari pembatasan.",
-            "Buka panduan resmi",
-            openBanGuide
+            "Buka panduan resmi", openBanGuide
         )
-        "OTP / kode tidak masuk" -> listOf(
+        "OTP / kode tidak masuk" -> StepAdvice(
             "Periksa sebelum meminta kode lagi",
             "Pastikan nomor dan kode negara benar, SIM bisa menerima SMS/panggilan, lalu tunggu timer di layar. Jangan bagikan kode registrasi atau PIN kepada siapa pun.",
-            "Buka panduan kode",
-            openOtpGuide
+            "Buka panduan kode", openOtpGuide
         )
-        "Coba lagi nanti" -> listOf(
+        "Coba lagi nanti" -> StepAdvice(
             "Ikuti waktu tunggu",
             "Jangan meminta kode berulang kali. Tunggu durasi yang ditampilkan aplikasi, lalu coba kembali melalui aplikasi resmi.",
-            "Buka panduan kode",
-            openOtpGuide
+            "Buka panduan kode", openOtpGuide
         )
-        "Akun diretas / diambil alih" -> listOf(
+        "Akun diretas / diambil alih" -> StepAdvice(
             "Amankan pendaftaran akun",
             "Gunakan aplikasi resmi dan prosedur registrasi nomor. Jangan pernah membagikan kode SMS atau PIN verifikasi kepada orang yang mengaku sebagai dukungan.",
-            "Buka WhatsApp",
-            openWhatsApp
+            "Buka WhatsApp", openWhatsApp
         )
-        else -> listOf(
+        else -> StepAdvice(
             "Gunakan saluran bantuan resmi",
             "Tulis pesan kesalahan yang tepat dan langkah yang sudah dilakukan. Jangan sertakan kata sandi, OTP, PIN, atau kode pemulihan.",
-            "Buka kontak resmi",
-            openContact
+            "Buka kontak resmi", openContact
         )
     }
     Card(
@@ -446,10 +446,10 @@ private fun NextStepsCard(
             Modifier.fillMaxWidth().padding(15.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-            Text(body, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, lineHeight = 17.sp)
-            OutlinedButton(onClick = click, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
-                Text(action, fontSize = 12.sp)
+            Text(advice.title, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            Text(advice.body, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, lineHeight = 17.sp)
+            OutlinedButton(onClick = advice.onClick, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
+                Text(advice.action, fontSize = 12.sp)
             }
         }
     }
