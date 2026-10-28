@@ -5,7 +5,9 @@ import android.content.ComponentName;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.view.Gravity;
@@ -14,6 +16,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.BaseAdapter;
+import android.widget.FrameLayout;
 import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -100,6 +103,8 @@ public final class MainActivity extends Activity {
 
     private void showHome() {
         drawer = false;
+        FrameLayout root = new FrameLayout(this);
+        root.setBackgroundColor(Color.BLACK);
         homeGrid = grid(true);
         homeAdapter = new AppsAdapter(home);
         homeGrid.setAdapter(homeAdapter);
@@ -117,7 +122,19 @@ public final class MainActivity extends Activity {
             return true;
         });
         homeGrid.setLongClickable(true);
-        setContentView(homeGrid);
+        homeGrid.setOnTouchListener((v, e) -> {
+            if (home.isEmpty() && e.getAction() == MotionEvent.ACTION_UP) {
+                showDrawer();
+                return true;
+            }
+            return false;
+        });
+        root.addView(homeGrid, new FrameLayout.LayoutParams(-1, -1));
+        DrawerButton drawerButton = new DrawerButton();
+        FrameLayout.LayoutParams buttonParams = new FrameLayout.LayoutParams(dp(48), dp(48), Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+        buttonParams.bottomMargin = dp(10);
+        root.addView(drawerButton, buttonParams);
+        setContentView(root);
     }
 
     private void showDrawer() {
@@ -184,6 +201,27 @@ public final class MainActivity extends Activity {
             t.icon.setImageDrawable(a.icon);
             t.label.setText(a.label);
             return (View) ((View) (old == null ? t.icon.getParent() : old));
+        }
+    }
+
+
+    private final class DrawerButton extends View {
+        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        DrawerButton() {
+            super(MainActivity.this);
+            setContentDescription("Buka laci aplikasi");
+            setClickable(true);
+            setOnClickListener(v -> showDrawer());
+        }
+        @Override protected void onDraw(Canvas canvas) {
+            float cx = getWidth() / 2f, cy = getHeight() / 2f;
+            paint.setColor(0xFF181818);
+            canvas.drawCircle(cx, cy, dp(20), paint);
+            paint.setColor(0xFFD0D0D0);
+            float gap = dp(5), radius = dp(1.5f);
+            for (int row = -1; row <= 1; row++)
+                for (int col = -1; col <= 1; col++)
+                    canvas.drawCircle(cx + col * gap, cy + row * gap, radius, paint);
         }
     }
 
